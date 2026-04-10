@@ -17,6 +17,29 @@
     return typeof value === "string" ? value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim() : "";
   }
 
+  function padTwo(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function addDaysToDateString(dateString, days) {
+    const [year, month, day] = String(dateString).split("-").map((value) => Number.parseInt(value, 10));
+    const date = new Date(Date.UTC(year, month - 1, day));
+    date.setUTCDate(date.getUTCDate() + days);
+    return `${date.getUTCFullYear()}-${padTwo(date.getUTCMonth() + 1)}-${padTwo(date.getUTCDate())}`;
+  }
+
+  function buildSeoulIsoDateTime(dateString, hourText, minuteText, secondText = "00") {
+    const normalizedHour = padTwo(hourText);
+    const normalizedMinute = padTwo(minuteText);
+    const normalizedSecond = padTwo(secondText);
+
+    if (normalizedHour === "24" && normalizedMinute === "00" && normalizedSecond === "00") {
+      return `${addDaysToDateString(dateString, 1)}T00:00:00+09:00`;
+    }
+
+    return `${dateString}T${normalizedHour}:${normalizedMinute}:${normalizedSecond}+09:00`;
+  }
+
   function ensureStyles() {
     if (document.getElementById(EXT.styleId)) return;
 
@@ -147,8 +170,8 @@
     const lectureDate = `${year}-${month}-${day}`;
     return {
       lectureDate,
-      startAt: `${lectureDate}T${timeMatches[0][1].padStart(2, "0")}:${timeMatches[0][2]}:${timeMatches[0][3]}+09:00`,
-      endAt: `${lectureDate}T${timeMatches[1][1].padStart(2, "0")}:${timeMatches[1][2]}:${timeMatches[1][3]}+09:00`
+      startAt: buildSeoulIsoDateTime(lectureDate, timeMatches[0][1], timeMatches[0][2], timeMatches[0][3]),
+      endAt: buildSeoulIsoDateTime(lectureDate, timeMatches[1][1], timeMatches[1][2], timeMatches[1][3])
     };
   }
 

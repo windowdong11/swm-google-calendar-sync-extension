@@ -133,13 +133,15 @@ function normalizeEvent(item, calendarId) {
 async function fetchCalendarEvents(timeMin, timeMax) {
   const settings = await getSettings();
   const all = [];
+  const normalizedTimeMin = normalizeCalendarDateTime(timeMin);
+  const normalizedTimeMax = normalizeCalendarDateTime(timeMax);
 
   for (const calendarId of settings.selectedCalendarIds) {
     let pageToken = "";
     do {
       const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
-      url.searchParams.set("timeMin", timeMin);
-      url.searchParams.set("timeMax", timeMax);
+      url.searchParams.set("timeMin", normalizedTimeMin);
+      url.searchParams.set("timeMax", normalizedTimeMax);
       url.searchParams.set("singleEvents", "true");
       url.searchParams.set("orderBy", "startTime");
       url.searchParams.set("maxResults", "2500");
@@ -169,6 +171,31 @@ function normalizeText(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function padTwo(value) {
+  return String(value).padStart(2, "0");
+}
+
+function addDaysToDateString(dateString, days) {
+  const [year, month, day] = String(dateString).split("-").map((value) => Number.parseInt(value, 10));
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  return `${date.getUTCFullYear()}-${padTwo(date.getUTCMonth() + 1)}-${padTwo(date.getUTCDate())}`;
+}
+
+function normalizeCalendarDateTime(value) {
+  const normalized = normalizeText(value);
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})T24:00(?::00(?:\.(\d{1,3}))?)?([+-]\d{2}:\d{2}|Z)$/);
+
+  if (!match) {
+    return normalized;
+  }
+
+  const [, dateString, fractional = "", timezone] = match;
+  const nextDate = addDaysToDateString(dateString, 1);
+  const fraction = fractional ? `.${fractional}` : "";
+  return `${nextDate}T00:00:00${fraction}${timezone}`;
+}
+
 function buildLectureSummary(title, place) {
   const normalizedTitle = normalizeText(title);
   const normalizedPlace = normalizeText(place);
@@ -189,8 +216,8 @@ function buildLecturePayload(input, mapping = {}) {
   const qustnrSn = normalizeText(input?.qustnrSn || mapping.qustnrSn);
   const title = normalizeText(input?.title || mapping.title);
   const place = normalizeText(input?.place || mapping.place);
-  const startAt = input?.startAt || mapping.startAt || "";
-  const endAt = input?.endAt || mapping.endAt || "";
+  const startAt = normalizeCalendarDateTime(input?.startAt || mapping.startAt || "");
+  const endAt = normalizeCalendarDateTime(input?.endAt || mapping.endAt || "");
   const detailUrl = normalizeText(input?.detailUrl || mapping.detailUrl);
   const summary = normalizeText(input?.summary || mapping.summary || buildLectureSummary(title, place));
 
@@ -230,11 +257,11 @@ function buildManagedEventBody(lecture) {
       }
     },
     start: {
-      dateTime: lecture.startAt,
+      dateTime: normalizeCalendarDateTime(lecture.startAt),
       timeZone: "Asia/Seoul"
     },
     end: {
-      dateTime: lecture.endAt,
+      dateTime: normalizeCalendarDateTime(lecture.endAt),
       timeZone: "Asia/Seoul"
     }
   };
@@ -259,8 +286,9 @@ function eventMatchesLecture(event, lecture) {
 }
 
 function shiftIsoString(value, offsetMs) {
-  const time = new Date(value).getTime();
-  if (Number.isNaN(time)) return value;
+  const normalizedValue = normalizeCalendarDateTime(value);
+  const time = new Date(normalizedValue).getTime();
+  if (Number.isNaN(time)) return normalizedValue;
   return new Date(time + offsetMs).toISOString();
 }
 

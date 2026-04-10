@@ -1,21 +1,38 @@
 (async function () {
+  const EXT = {
+    badgeClass: "soma-badge",
+    detailMarkerAttr: "data-soma-detail-status",
+    detailPanelClass: "soma-panel--detail",
+    detailStatusNoteClass: "soma-detail-status-note"
+  };
+  const LectureStatus = globalThis.SomaLectureStatus;
+
+  if (!LectureStatus) {
+    throw new Error("SomaLectureStatus helper를 찾지 못했습니다.");
+  }
+
   function sendMessage(message) {
     return chrome.runtime.sendMessage(message);
   }
 
-  function findGroupValue(label) {
-    const groups = Array.from(document.querySelectorAll(".bbs-view-new .group"));
-    for (const group of groups) {
+  function normalizeText(value) {
+    return typeof value === "string" ? value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim() : "";
+  }
+
+  function findGroup(label) {
+    return Array.from(document.querySelectorAll(".bbs-view-new .group")).find((group) => {
       const title = group.querySelector(".t")?.textContent?.trim();
-      if (title === label) {
-        return group.querySelector(".c")?.textContent?.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim() || "";
-      }
-    }
-    return "";
+      return title === label;
+    }) || null;
+  }
+
+  function findGroupValue(label) {
+    const group = findGroup(label);
+    return normalizeText(group?.querySelector(".c")?.textContent || "");
   }
 
   function parseLectureDateTime(raw) {
-    const normalized = (raw || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+    const normalized = normalizeText(raw);
     const dateMatch = normalized.match(/(\d{4})\.(\d{2})\.(\d{2})/);
     const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2})/g)];
 
@@ -31,8 +48,38 @@
     const date = `${year}-${month}-${day}`;
 
     return {
-      startAt: `${date}T${startHour}:${startMinute}:00+09:00`,
-      endAt: `${date}T${endHour}:${endMinute}:00+09:00`
+      startAt: LectureStatus.buildSeoulIsoDateTime(date, startHour, startMinute),
+      endAt: LectureStatus.buildSeoulIsoDateTime(date, endHour, endMinute)
+    };
+  }
+
+  function extractLectureStatusInfo() {
+    const qustnrSn = document.querySelector('input[name="qustnrSn"]')?.value?.trim() || "";
+    const title = findGroupValue("모집 명");
+    const place = findGroupValue("장소");
+    const lectureDate = findGroupValue("강의날짜");
+    let schedule = null;
+
+    try {
+      schedule = parseLectureDateTime(lectureDate);
+    } catch (_error) {
+      schedule = null;
+    }
+
+    if (!qustnrSn || !title) {
+      return null;
+    }
+
+    return {
+      id: qustnrSn,
+      qustnrSn,
+      title,
+      place,
+      startAt: schedule?.startAt || "",
+      endAt: schedule?.endAt || "",
+      parseFailed: !schedule,
+      detailUrl: location.href,
+      url: location.href
     };
   }
 
@@ -67,6 +114,198 @@
       endAt,
       detailUrl: location.href
     };
+  }
+
+  function markDetailElement(element) {
+    element.setAttribute(EXT.detailMarkerAttr, "1");
+    return element;
+  }
+
+  function clearDetailStatusUI() {
+    document.querySelectorAll(`[${EXT.detailMarkerAttr}="1"]`).forEach((element) => element.remove());
+  }
+
+  function getDetailStatusHost() {
+    const group = findGroup("모집 명");
+    if (!group) return null;
+
+    const value = group.querySelector(".c");
+    if (!value) return null;
+
+    return { group, value };
+  }
+
+  function renderStatusNote(message) {
+    const host = getDetailStatusHost();
+    if (!host) return;
+
+    const note = markDetailElement(document.createElement("div"));
+    note.className = `soma-note ${EXT.detailStatusNoteClass}`;
+    note.textContent = message;
+    host.group.appendChild(note);
+  }
+
+  function buildDetailLoadFailureMessage(error) {
+    const message = error instanceof Error ? error.message : String(error || "");
+
+    if (!message) {
+      return "지금은 Google Calendar 일정을 불러오지 못해 겹침 여부를 계산하지 못했습니다.";
+    }
+
+    if (message.includes("연결") || message.includes("OAuth") || message.includes("인증")) {
+      return `Google Calendar를 연결하면 겹침 여부를 확인할 수 있습니다. (${message})`;
+    }
+
+    return `지금은 Google Calendar 일정을 불러오지 못해 겹침 여부를 계산하지 못했습니다. (${message})`;
+  }
+
+  function buildSettingsFailureMessage(error) {
+    const message = error instanceof Error ? error.message : String(error || "");
+    return message
+      ? `설정을 불러오지 못해 겹침 여부를 계산하지 못했습니다. (${message})`
+      : "설정을 불러오지 못해 겹침 여부를 계산하지 못했습니다.";
+  }
+
+  async function loadSettings() {
+    const response = await sendMessage({ type: "GET_SETTINGS" });
+    if (!response?.ok || !response.settings) {
+      throw new Error(response?.error || "설정을 불러오지 못했습니다.");
+    }
+    return response.settings;
+  }
+
+  async function loadEvents(timeMin, timeMax) {
+    const response = await sendMessage({ type: "GET_CALENDAR_EVENTS", payload: { timeMin, timeMax } });
+    if (!response?.ok || !response.events) {
+      throw new Error(response?.error || "일정을 불러오지 못했습니다.");
+    }
+    return response.events;
+  }
+
+  async function loadLectureMappings(qustnrSns) {
+    const response = await sendMessage({
+      type: "GET_LECTURE_MAPPINGS",
+      payload: { qustnrSns }
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "특강 매핑을 불러오지 못했습니다.");
+    }
+
+    return response.mappings || {};
+  }
+
+  function shiftIsoValue(value, offsetMs) {
+    const normalizedValue = LectureStatus.normalizeCalendarDateTime(value);
+    const time = new Date(normalizedValue).getTime();
+    if (Number.isNaN(time)) {
+      return normalizedValue;
+    }
+
+    return new Date(time + offsetMs).toISOString();
+  }
+
+  function buildIgnoredEventOptions(lecture, mappings) {
+    const ignoredEventIds = [];
+    const mapping = mappings?.[lecture.qustnrSn];
+
+    if (mapping?.eventId) {
+      ignoredEventIds.push(mapping.eventId);
+    }
+
+    return {
+      ignoredEventIds,
+      ignoredLectureIds: lecture.qustnrSn ? [lecture.qustnrSn] : []
+    };
+  }
+
+  function renderDecisionBadge(decision, lecture, settings, historyRegistrations) {
+    const host = getDetailStatusHost();
+    if (!host) return;
+
+    const badge = markDetailElement(LectureStatus.createBadge(decision, {
+      badgeClass: EXT.badgeClass
+    }));
+    host.value.appendChild(badge);
+
+    if (decision.status === "CLEAR") {
+      return;
+    }
+
+    const panel = markDetailElement(LectureStatus.createPanel(decision, {
+      settings,
+      lecture,
+      historyRegistrations,
+      currentLectureId: lecture.qustnrSn,
+      allowDirectDelete: false,
+      allowConflictCancel: false,
+      allowLectureCancel: false,
+      showLectureActionRow: false,
+      showDetailLink: false,
+      panelClassName: EXT.detailPanelClass
+    }));
+
+    host.group.appendChild(panel);
+    badge.addEventListener("click", () => {
+      panel.hidden = !panel.hidden;
+    });
+  }
+
+  async function renderLectureStatus() {
+    clearDetailStatusUI();
+
+    const lecture = extractLectureStatusInfo();
+    if (!lecture) {
+      return;
+    }
+
+    if (lecture.parseFailed) {
+      const decision = LectureStatus.classifyLecture(lecture, [], 0);
+      renderDecisionBadge(decision, lecture, { allowDirectDelete: false }, new Map());
+      return;
+    }
+
+    let settings;
+    try {
+      settings = await loadSettings();
+    } catch (error) {
+      renderStatusNote(buildSettingsFailureMessage(error));
+      return;
+    }
+    let mappings = {};
+
+    try {
+      mappings = await loadLectureMappings([lecture.qustnrSn]);
+    } catch (error) {
+      console.warn("Failed to load lecture mappings:", error);
+    }
+
+    let events;
+    try {
+      const timeMin = shiftIsoValue(lecture.startAt, -(settings.backToBackMinutes || 0) * 60 * 1000);
+      events = await loadEvents(timeMin, lecture.endAt);
+    } catch (error) {
+      renderStatusNote(buildDetailLoadFailureMessage(error));
+      return;
+    }
+
+    const decision = LectureStatus.classifyLecture(
+      lecture,
+      events,
+      settings.backToBackMinutes,
+      buildIgnoredEventOptions(lecture, mappings)
+    );
+
+    let historyRegistrations = new Map();
+    if (decision.status === "OVERLAP") {
+      try {
+        historyRegistrations = await LectureStatus.collectHistoryRegistrations();
+      } catch (error) {
+        console.warn("Failed to load history registrations:", error);
+      }
+    }
+
+    renderDecisionBadge(decision, lecture, settings, historyRegistrations);
   }
 
   async function ensureGoogleConnected() {
@@ -339,4 +578,11 @@
 
   installApplyHandler();
   installCancelHandler();
+
+  try {
+    await renderLectureStatus();
+  } catch (error) {
+    console.warn("Failed to render lecture status:", error);
+    renderStatusNote(buildDetailLoadFailureMessage(error));
+  }
 })();

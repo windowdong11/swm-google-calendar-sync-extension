@@ -126,6 +126,11 @@
   background: #eef2f7;
 }
 
+.soma-panel--detail,
+.soma-detail-status-note {
+  margin-top: 10px;
+}
+
 .soma-panel-row td {
   padding: 0 !important;
 }

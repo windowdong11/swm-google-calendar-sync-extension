@@ -28,13 +28,14 @@
   "content_scripts": [
     {
       "matches": ["https://www.swmaestro.ai/sw/mypage/mentoLec/list.do*"],
-      "js": ["src/content/content.js"],
+      "js": ["src/content/lecture-status.js", "src/content/content.js"],
       "css": ["src/content/styles.css"],
       "run_at": "document_idle"
     },
     {
       "matches": ["https://www.swmaestro.ai/sw/mypage/mentoLec/view.do*"],
-      "js": ["src/content/apply.js"],
+      "js": ["src/content/lecture-status.js", "src/content/apply.js"],
+      "css": ["src/content/styles.css"],
       "run_at": "document_idle"
     },
     {

@@ -9,6 +9,11 @@
     authBannerClass: "soma-auth-banner",
     statusBannerClass: "soma-status-banner"
   };
+  const LectureStatus = globalThis.SomaLectureStatus;
+
+  if (!LectureStatus) {
+    throw new Error("SomaLectureStatus helper를 찾지 못했습니다.");
+  }
 
   function sendMessage(message) {
     return chrome.runtime.sendMessage(message);
@@ -187,15 +192,13 @@
       }
 
       const date = dateMatch[1];
-      const startTime = `${timeMatches[0][1].padStart(2, "0")}:${timeMatches[0][2]}`;
-      const endTime = `${timeMatches[1][1].padStart(2, "0")}:${timeMatches[1][2]}`;
 
       lectures.push({
         id,
         title: titleLink.textContent?.trim() || "",
         url: new URL(href, location.origin).toString(),
-        startAt: `${date}T${startTime}:00+09:00`,
-        endAt: `${date}T${endTime}:00+09:00`,
+        startAt: LectureStatus.buildSeoulIsoDateTime(date, timeMatches[0][1], timeMatches[0][2]),
+        endAt: LectureStatus.buildSeoulIsoDateTime(date, timeMatches[1][1], timeMatches[1][2]),
         parseFailed: false,
         statusText: "접수중",
         rawText
@@ -220,184 +223,8 @@
     return map;
   }
 
-  function classifyLecture(lecture, events, backToBackMinutes) {
-    if (lecture.parseFailed || !lecture.startAt || !lecture.endAt) {
-      return {
-        lectureId: lecture.id,
-        status: "UNKNOWN",
-        conflictingEvents: []
-      };
-    }
-
-    const lectureStart = new Date(lecture.startAt).getTime();
-    const lectureEnd = new Date(lecture.endAt).getTime();
-
-    const conflictingEvents = events.filter((event) => {
-      const eventStart = new Date(event.startAt).getTime();
-      const eventEnd = new Date(event.endAt).getTime();
-      return lectureStart < eventEnd && eventStart < lectureEnd;
-    });
-
-    if (conflictingEvents.length > 0) {
-      return {
-        lectureId: lecture.id,
-        status: "OVERLAP",
-        conflictingEvents
-      };
-    }
-
-    const thresholdMs = backToBackMinutes * 60 * 1000;
-    let adjacentPreviousEvent;
-    let bestGap = Number.POSITIVE_INFINITY;
-
-    for (const event of events) {
-      const eventEnd = new Date(event.endAt).getTime();
-      const gap = lectureStart - eventEnd;
-      if (gap >= 0 && gap <= thresholdMs && gap < bestGap) {
-        bestGap = gap;
-        adjacentPreviousEvent = event;
-      }
-    }
-
-    if (adjacentPreviousEvent) {
-      return {
-        lectureId: lecture.id,
-        status: "BACK_TO_BACK_PREV",
-        conflictingEvents: [],
-        adjacentPreviousEvent,
-        gapMinutes: Math.round(bestGap / 60000)
-      };
-    }
-
-    return {
-      lectureId: lecture.id,
-      status: "CLEAR",
-      conflictingEvents: []
-    };
-  }
-
-  function formatDateTime(value) {
-    const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return value;
-    return d.toLocaleString("ko-KR", {
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  }
-
-  function parseHistoryDateText(rawText) {
-    const normalized = normalizeText(rawText);
-    const dateMatch = normalized.match(/(\d{4})-(\d{2})-(\d{2})/);
-    const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)];
-
-    if (!dateMatch || timeMatches.length < 2) {
-      return null;
-    }
-
-    const [, year, month, day] = dateMatch;
-    const date = `${year}-${month}-${day}`;
-    return {
-      startAt: `${date}T${timeMatches[0][1].padStart(2, "0")}:${timeMatches[0][2]}:${timeMatches[0][3]}+09:00`,
-      endAt: `${date}T${timeMatches[1][1].padStart(2, "0")}:${timeMatches[1][2]}:${timeMatches[1][3]}+09:00`
-    };
-  }
-
-  function getHistoryLastPage(doc) {
-    const pages = [1];
-
-    doc.querySelectorAll(".pagination [data-endpage]").forEach((element) => {
-      const value = Number.parseInt(element.getAttribute("data-endpage") || "", 10);
-      if (Number.isFinite(value)) {
-        pages.push(value);
-      }
-    });
-
-    doc.querySelectorAll(".pagination *").forEach((element) => {
-      const value = Number.parseInt(normalizeText(element.textContent), 10);
-      if (Number.isFinite(value)) {
-        pages.push(value);
-      }
-    });
-
-    return Math.max(...pages);
-  }
-
-  async function fetchHtmlDocument(url) {
-    const response = await fetch(url, {
-      credentials: "same-origin"
-    });
-
-    if (!response.ok) {
-      throw new Error(`페이지를 불러오지 못했습니다. (${response.status})`);
-    }
-
-    const html = await response.text();
-    return new DOMParser().parseFromString(html, "text/html");
-  }
-
-  function parseHistoryRegistrationRow(row) {
-    const cells = Array.from(row.querySelectorAll("td"));
-    if (cells.length < 9) return null;
-
-    const statusText = normalizeText(cells[6]?.textContent);
-    if (!statusText.includes("접수완료")) {
-      return null;
-    }
-
-    const titleCell = row.querySelector("td.tit");
-    const title = normalizeText(titleCell?.textContent);
-    const link = titleCell?.querySelector("a");
-    const href = link?.getAttribute("href") || "";
-    const qustnrSn = href.match(/qustnrSn=(\d+)/)?.[1] || "";
-    const schedule = parseHistoryDateText(cells[4]?.textContent || "");
-    const cancelHref = row.querySelector('a[href^="javascript:delDate("]')?.getAttribute("href") || "";
-    const cancelMatch = cancelHref.match(/delDate\('([^']+)','([^']+)',\s*'([^']+)'\)/);
-
-    if (!title || !qustnrSn || !schedule) {
-      return null;
-    }
-
-    return {
-      qustnrSn,
-      title,
-      detailUrl: href ? new URL(href, location.origin).toString() : "",
-      startAt: schedule.startAt,
-      endAt: schedule.endAt,
-      applySn: cancelMatch?.[1] || "",
-      gubun: cancelMatch?.[3] || "mentoLec"
-    };
-  }
-
-  function parseHistoryRegistrations(doc) {
-    const rows = Array.from(doc.querySelectorAll(".boardlist table tbody tr"));
-    return rows
-      .map((row) => parseHistoryRegistrationRow(row))
-      .filter(Boolean);
-  }
-
-  async function collectHistoryRegistrations() {
-    const baseUrl = new URL("/sw/mypage/userAnswer/history.do?menuNo=200047", location.origin);
-    const firstDoc = await fetchHtmlDocument(baseUrl.toString());
-    const lastPage = getHistoryLastPage(firstDoc);
-    const registrations = new Map();
-
-    for (let pageIndex = 1; pageIndex <= lastPage; pageIndex += 1) {
-      const doc = pageIndex === 1
-        ? firstDoc
-        : await fetchHtmlDocument(`${baseUrl.toString()}&pageIndex=${pageIndex}`);
-      const rows = parseHistoryRegistrations(doc);
-      for (const registration of rows) {
-        registrations.set(registration.qustnrSn, registration);
-      }
-    }
-
-    return registrations;
-  }
-
   async function syncFromHistorySource() {
-    const registrations = await collectHistoryRegistrations();
+    const registrations = await LectureStatus.collectHistoryRegistrations();
     const response = await sendMessage({
       type: "SYNC_SOURCE_LECTURES",
       payload: {
@@ -419,203 +246,12 @@
     return response;
   }
 
-  function findOverlapLectureRegistration(event, currentLectureId, historyRegistrations) {
-    if (!event?.somaQustnrSn || !historyRegistrations?.size) {
-      return null;
-    }
-
-    const registration = historyRegistrations.get(event.somaQustnrSn) || null;
-    if (!registration || registration.qustnrSn === currentLectureId) {
-      return null;
-    }
-
-    return registration;
-  }
-
-  function buildConflictEventText(event, overlapRegistration) {
-    const base = `${event.title} (${formatDateTime(event.startAt)} ~ ${formatDateTime(event.endAt)})`;
-
-    if (overlapRegistration?.applySn && canCancelRegistration(overlapRegistration)) {
-      return `${base} · 신청한 다른 특강`;
-    }
-
-    if (overlapRegistration?.applySn) {
-      return `${base} · 신청한 다른 특강(24시간 이내 취소 불가)`;
-    }
-
-    if (overlapRegistration) {
-      return `${base} · 신청한 다른 특강(여기서 취소 불가)`;
-    }
-
-    if (event.isSomaLecture) {
-      return `${base} · SOMA 특강 일정`;
-    }
-
-    return base;
-  }
-
-  function canCancelRegistration(registration) {
-    const startTime = new Date(registration?.startAt || "");
-    if (Number.isNaN(startTime.getTime())) {
-      return true;
-    }
-
-    return startTime.getTime() - Date.now() > 24 * 60 * 60 * 1000;
-  }
-
   function clearInjectedUI() {
     document.querySelectorAll(`.${EXT.badgeClass}, .${EXT.panelRowClass}, .${EXT.summaryClass}, .${EXT.filterClass}, .${EXT.queryBarClass}, .${EXT.noteClass}, .${EXT.authBannerClass}, .${EXT.statusBannerClass}`).forEach((el) => el.remove());
     document.querySelectorAll("[data-soma-hidden='1']").forEach((el) => {
       el.style.display = "";
       el.removeAttribute("data-soma-hidden");
     });
-  }
-
-  function createBadge(decision) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = EXT.badgeClass;
-
-    if (decision.status === "OVERLAP") {
-      btn.textContent = `❌ 겹침 (${decision.conflictingEvents.length})`;
-      btn.dataset.status = "overlap";
-    } else if (decision.status === "BACK_TO_BACK_PREV") {
-      btn.textContent = "⚠️ 바로 이어짐";
-      btn.dataset.status = "adjacent";
-    } else if (decision.status === "UNKNOWN") {
-      btn.textContent = "⚪ 시간 확인 필요";
-      btn.dataset.status = "unknown";
-    } else {
-      btn.textContent = "✅ 겹치지 않음";
-      btn.dataset.status = "clear";
-    }
-
-    return btn;
-  }
-
-  function createPanel(decision, settings, lecture, registration, historyRegistrations, onDelete, onCancelLecture) {
-    const panel = document.createElement("div");
-    panel.className = "soma-panel";
-    panel.hidden = true;
-
-    if (decision.status === "OVERLAP") {
-      const title = document.createElement("div");
-      title.className = "soma-panel-title";
-      title.textContent = `겹치는 일정 ${decision.conflictingEvents.length}개`;
-      panel.appendChild(title);
-
-      for (const event of decision.conflictingEvents) {
-        const item = document.createElement("div");
-        item.className = "soma-panel-item";
-        const overlapRegistration = findOverlapLectureRegistration(event, lecture.id, historyRegistrations);
-
-        const text = document.createElement("div");
-        text.className = "soma-panel-text";
-        text.textContent = buildConflictEventText(event, overlapRegistration);
-
-        const actions = document.createElement("div");
-        actions.className = "soma-panel-actions";
-
-        if (event.htmlLink) {
-          const openBtn = document.createElement("a");
-          openBtn.href = event.htmlLink;
-          openBtn.target = "_blank";
-          openBtn.rel = "noopener noreferrer";
-          openBtn.textContent = "캘린더에서 열기";
-          openBtn.className = "soma-link-btn";
-          actions.appendChild(openBtn);
-        }
-
-        if (settings.allowDirectDelete) {
-          const delBtn = document.createElement("button");
-          delBtn.type = "button";
-          delBtn.className = "soma-danger-btn";
-          delBtn.textContent = "삭제";
-          delBtn.addEventListener("click", () => onDelete(event.calendarId, event.id));
-          actions.appendChild(delBtn);
-        }
-
-        if (overlapRegistration) {
-          const cancelBtn = document.createElement("button");
-          cancelBtn.type = "button";
-          cancelBtn.className = "soma-danger-btn";
-          cancelBtn.textContent = "겹친 특강 취소";
-          cancelBtn.disabled = !overlapRegistration.applySn || !canCancelRegistration(overlapRegistration);
-          cancelBtn.addEventListener("click", () => onCancelLecture(overlapRegistration, cancelBtn));
-          actions.appendChild(cancelBtn);
-        }
-
-        item.appendChild(text);
-        item.appendChild(actions);
-        panel.appendChild(item);
-      }
-
-      const lectureActionRow = document.createElement("div");
-      lectureActionRow.className = "soma-panel-item";
-
-      const lectureActionText = document.createElement("div");
-      lectureActionText.className = "soma-panel-text";
-
-      const lectureActionActions = document.createElement("div");
-      lectureActionActions.className = "soma-panel-actions";
-
-      const detailLink = document.createElement("a");
-      detailLink.href = lecture.url;
-      detailLink.target = "_blank";
-      detailLink.rel = "noopener noreferrer";
-      detailLink.textContent = "특강 상세 보기";
-      detailLink.className = "soma-link-btn";
-      lectureActionActions.appendChild(detailLink);
-
-      if (registration) {
-        const cancelBtn = document.createElement("button");
-        cancelBtn.type = "button";
-        cancelBtn.className = "soma-danger-btn";
-        cancelBtn.textContent = "이 특강 취소";
-        cancelBtn.disabled = !registration.applySn || !canCancelRegistration(registration);
-        cancelBtn.addEventListener("click", () => onCancelLecture(registration, cancelBtn));
-        lectureActionActions.appendChild(cancelBtn);
-
-        lectureActionText.textContent = registration.applySn
-          ? canCancelRegistration(registration)
-            ? "이미 신청한 특강입니다. 특강 취소 후 접수내역 기준으로 다시 동기화할 수 있습니다."
-            : "특강 시작 24시간 이내라서 여기서는 취소할 수 없습니다."
-          : "현재 접수내역 기준으로는 이 특강을 바로 취소할 수 없습니다.";
-      } else {
-        lectureActionText.textContent = "접수내역에 없는 특강이라서 여기서 바로 취소할 수 없습니다.";
-      }
-
-      lectureActionRow.appendChild(lectureActionText);
-      lectureActionRow.appendChild(lectureActionActions);
-      panel.appendChild(lectureActionRow);
-    } else if (decision.status === "BACK_TO_BACK_PREV" && decision.adjacentPreviousEvent) {
-      const title = document.createElement("div");
-      title.className = "soma-panel-title";
-      title.textContent = "직전 일정과 바로 이어집니다";
-      panel.appendChild(title);
-
-      const text = document.createElement("div");
-      text.className = "soma-panel-text";
-      text.textContent = `${decision.adjacentPreviousEvent.title} · 간격 ${decision.gapMinutes || 0}분`;
-      panel.appendChild(text);
-
-      if (decision.adjacentPreviousEvent.htmlLink) {
-        const openBtn = document.createElement("a");
-        openBtn.href = decision.adjacentPreviousEvent.htmlLink;
-        openBtn.target = "_blank";
-        openBtn.rel = "noopener noreferrer";
-        openBtn.textContent = "직전 일정 보기";
-        openBtn.className = "soma-link-btn";
-        panel.appendChild(openBtn);
-      }
-    } else if (decision.status === "UNKNOWN") {
-      const text = document.createElement("div");
-      text.className = "soma-panel-text";
-      text.textContent = "이 특강의 시간을 파싱하지 못했습니다. 사이트 구조가 바뀌었을 수 있습니다.";
-      panel.appendChild(text);
-    }
-
-    return panel;
   }
 
   function attachDecisionUI(row, lecture, decision, settings, registration, historyRegistrations, onDelete, onCancelLecture) {
@@ -625,7 +261,9 @@
     row.querySelector(`.${EXT.panelRowClass}`)?.remove();
     rel.querySelector(`.${EXT.badgeClass}`)?.remove();
 
-    const badge = createBadge(decision);
+    const badge = LectureStatus.createBadge(decision, {
+      badgeClass: EXT.badgeClass
+    });
     rel.appendChild(badge);
 
     if (decision.status === "CLEAR") return;
@@ -635,13 +273,32 @@
 
     const panelCell = document.createElement("td");
     panelCell.colSpan = 9;
-    const panel = createPanel(decision, settings, lecture, registration, historyRegistrations, onDelete, onCancelLecture);
+    const panel = LectureStatus.createPanel(decision, {
+      settings,
+      lecture,
+      registration,
+      historyRegistrations,
+      onDelete,
+      onCancelLecture,
+      allowDirectDelete: settings.allowDirectDelete,
+      allowConflictCancel: true,
+      allowLectureCancel: true,
+      showLectureActionRow: true,
+      showDetailLink: true,
+      initiallyHidden: false
+    });
+    const panelId = `soma-panel-${lecture.id}`;
+    panel.id = panelId;
     panelCell.appendChild(panel);
     panelRow.appendChild(panelCell);
+    panelRow.hidden = true;
 
     row.insertAdjacentElement("afterend", panelRow);
+    badge.setAttribute("aria-controls", panelId);
+    badge.setAttribute("aria-expanded", "false");
     badge.addEventListener("click", () => {
-      panel.hidden = !panel.hidden;
+      panelRow.hidden = !panelRow.hidden;
+      badge.setAttribute("aria-expanded", String(!panelRow.hidden));
     });
   }
 
@@ -810,6 +467,16 @@
     if (!response.ok) throw new Error(response.error || "일정 삭제에 실패했습니다.");
   }
 
+  function shiftIsoValue(value, offsetMs) {
+    const normalizedValue = LectureStatus.normalizeCalendarDateTime(value);
+    const time = new Date(normalizedValue).getTime();
+    if (Number.isNaN(time)) {
+      return normalizedValue;
+    }
+
+    return new Date(time + offsetMs).toISOString();
+  }
+
   async function cancelLectureRegistration(registration) {
     const body = new URLSearchParams({
       id: registration.applySn,
@@ -864,8 +531,9 @@
     let events = [];
 
     if (validLectures.length > 0) {
-      const timeMin = validLectures.map((l) => l.startAt).sort()[0];
+      const earliestStart = validLectures.map((lecture) => lecture.startAt).sort()[0];
       const timeMax = validLectures.map((l) => l.endAt).sort().slice(-1)[0];
+      const timeMin = shiftIsoValue(earliestStart, -(settings.backToBackMinutes || 0) * 60 * 1000);
       try {
         events = await loadEvents(timeMin, timeMax);
         showStatusBanner({ somaLoggedIn: true, googleConnected: true });
@@ -882,7 +550,7 @@
     const decisionsByLectureId = new Map();
 
     for (const lecture of lectures) {
-      const decision = classifyLecture(lecture, events, settings.backToBackMinutes);
+      const decision = LectureStatus.classifyLecture(lecture, events, settings.backToBackMinutes);
       decisions.push(decision);
       decisionsByLectureId.set(lecture.id, decision);
     }
@@ -894,7 +562,7 @@
 
     if (overlapLectureIds.length > 0) {
       try {
-        historyRegistrations = await collectHistoryRegistrations();
+        historyRegistrations = await LectureStatus.collectHistoryRegistrations();
       } catch (error) {
         console.warn("Failed to load history registrations:", error);
       }
@@ -922,7 +590,7 @@
             window.alert("현재 접수내역 기준으로는 이 특강을 취소할 수 없습니다.");
             return;
           }
-          if (!canCancelRegistration(selectedRegistration)) {
+          if (!LectureStatus.canCancelRegistration(selectedRegistration)) {
             window.alert("특강 시작 24시간 이내에는 취소할 수 없습니다.");
             return;
           }
