@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOMA Schedule Helper Example - Apply View</title>
+</head>
+<body>
+  <form id="board" name="board" method="post">
+    <input type="hidden" name="pageQueryString" value="qustnrSn=10001&amp;menuNo=200046&amp;searchStatMentolec=A&amp;pageIndex=1" />
+    <input type="hidden" name="qustnrSn" value="10001" />
+
+    <div class="bbs-view-new">
+      <div class="top">
+        <div class="group">
+          <strong class="t">모집 명</strong>
+          <div class="c">[예시] 제품 아이디어 검증 워크숍</div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">상태</strong>
+            <div class="c"><strong class="color-red">[접수중]</strong></div>
+          </div>
+
+          <div class="group">
+            <strong class="t">개설 승인</strong>
+            <div class="c">-</div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">접수 기간</strong>
+            <div class="c">2026.04.10 ~ 2026.04.24</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">강의날짜</strong>
+            <div class="c">
+              <span class="eventDt">2026.04.24</span>
+              &nbsp; 10:00시 ~ 12:30시
+            </div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">장소</strong>
+            <div class="c">온라인(Webex)</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">모집인원</strong>
+            <div class="c">5명</div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">작성자</strong>
+            <div class="c">데모 멘토</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">등록일</strong>
+            <div class="c color">2026.04.10</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cont">
+        <p>이 파일은 공개 저장소용 비식별 예시 페이지입니다.</p>
+        <p>실제 사용자 이름, 신청 이력, 외부 연락처, 운영 링크는 포함하지 않습니다.</p>
+      </div>
+    </div>
+  </form>
+
+  <div class="btn_w-st1 mt50">
+    <button type="button" class="btn-st1 bg-navy" id="applyLec">신청하기</button>
+  </div>
+
+  <div class="total-normal mt50">신청자 리스트 [<strong class="color-blue">2 명</strong>]</div>
+  <div class="boardlist">
+    <table>
+      <thead>
+        <tr>
+          <th>NO.</th>
+          <th>연수생</th>
+          <th>신청일</th>
+          <th>취소일</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td class="popuser"><a href="javascript: popuser('sample-user-1')" title="상세 페이지로 이동">가명 사용자A</a></td>
+          <td>2026.04.10 09:00</td>
+          <td>-</td>
+          <td><span class="color-blue">[신청완료]</span></td>
+        </tr>
+        <tr>
+          <td><span class="color-red">취소</span></td>
+          <td><span class="td-lt">가명 사용자B</span></td>
+          <td><span class="td-lt">2026.04.10 08:30</span></td>
+          <td>2026.04.10 08:45</td>
+          <td><span class="color-red">[신청취소]</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    function popuser() {}
+    function applyCancel() {}
+  </script>
+</body>
+</html>

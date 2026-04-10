@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOMA Schedule Helper Example - History/List View</title>
+</head>
+<body>
+  <div class="boardlist">
+    <table class="t">
+      <thead>
+        <tr>
+          <th>NO.</th>
+          <th>구분</th>
+          <th>제목</th>
+          <th>작성자</th>
+          <th>진행날짜</th>
+          <th>신청일</th>
+          <th>상태</th>
+          <th>승인</th>
+          <th>히스토리</th>
+          <th>비고</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="block-pc">1</td>
+          <td>멘토특강</td>
+          <td class="tit popuser">
+            <a href="/sw/mypage/mentoLec/view.do?qustnrSn=10011&amp;menuNo=200046&amp;pageIndex=1&amp;history=y">[예시] 사용자 인터뷰 시작하기</a>
+          </td>
+          <td class="pc_only">데모 멘토</td>
+          <td class="pc_only">2026-04-18(토)<br>&nbsp;14:00:00 ~ 16:00:00</td>
+          <td class="pc_only">2026-04-10 <span class="block-m">09:00</span></td>
+          <td class="pc_only">접수완료</td>
+          <td class="pc_only">OK</td>
+          <td class="pc_only">-</td>
+          <td class="pc_only">
+            <a href="javascript:delDate('sample-apply-11','10011','mentoLec');">취소</a>
+          </td>
+        </tr>
+        <tr>
+          <td class="block-pc">2</td>
+          <td>멘토특강</td>
+          <td class="tit popuser">
+            <a href="/sw/mypage/mentoLec/view.do?qustnrSn=10012&amp;menuNo=200046&amp;pageIndex=1&amp;history=y">[예시] MVP 설계 워크숍</a>
+          </td>
+          <td class="pc_only">데모 멘토 B</td>
+          <td class="pc_only">2026-04-20(월)<br>&nbsp;10:00:00 ~ 12:00:00</td>
+          <td class="pc_only">2026-04-10 <span class="block-m">10:20</span></td>
+          <td class="pc_only">접수완료</td>
+          <td class="pc_only">OK</td>
+          <td class="pc_only">삭제</td>
+          <td class="pc_only">-</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="paginationSet">
+    <ul class="pagination pagination-centered">
+      <li class="active"><span><em title="현재목록"><span>1</span></em></span></li>
+      <li class="i end disabled"><a title="마지막 목록" href="#" data-endpage="1"><span class="s"><span>끝 <span class="t">목록</span></span></span></a></li>
+    </ul>
+  </div>
+
+  <script>
+    function delDate() {}
+  </script>
+</body>
+</html>

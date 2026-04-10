@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SOMA Schedule Helper Example - Cancel View</title>
+</head>
+<body>
+  <form id="board" name="board" method="post">
+    <input type="hidden" name="pageQueryString" value="qustnrSn=10002&amp;menuNo=200046&amp;searchStatMentolec=&amp;pageIndex=1" />
+    <input type="hidden" name="qustnrSn" value="10002" />
+
+    <div class="bbs-view-new">
+      <div class="top">
+        <div class="group">
+          <strong class="t">모집 명</strong>
+          <div class="c">[예시] 시장 검증 실전 세션</div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">상태</strong>
+            <div class="c">[마감]</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">개설 승인</strong>
+            <div class="c"><strong class="color-blue2">OK</strong></div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">접수 기간</strong>
+            <div class="c">2026.04.10 ~ 2026.04.29</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">강의날짜</strong>
+            <div class="c">
+              <span class="eventDt">2026.04.30</span>
+              &nbsp; 14:00시 ~ 16:00시
+            </div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">장소</strong>
+            <div class="c">스페이스 M1</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">모집인원</strong>
+            <div class="c">7명</div>
+          </div>
+        </div>
+
+        <div class="half_w clearfix">
+          <div class="group">
+            <strong class="t">작성자</strong>
+            <div class="c">데모 멘토</div>
+          </div>
+
+          <div class="group">
+            <strong class="t">등록일</strong>
+            <div class="c color">2026.04.10</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cont">
+        <p>이 파일은 취소 흐름 점검용 예시 페이지입니다.</p>
+        <p>실제 신청자 이름, 내부 식별자, 외부 서비스 링크는 포함하지 않습니다.</p>
+      </div>
+    </div>
+  </form>
+
+  <div class="btn_w-st1 mt50">
+    <button type="button" class="btn-st1 bg-black_r" onclick="applyCancel('10002','sample-apply-1');">취소하기</button>
+  </div>
+
+  <div class="total-normal mt50">신청자 리스트 [<strong class="color-blue">3 명</strong>]</div>
+  <div class="boardlist">
+    <table>
+      <thead>
+        <tr>
+          <th>NO.</th>
+          <th>연수생</th>
+          <th>신청일</th>
+          <th>취소일</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td class="popuser"><a href="javascript: popuser('sample-user-11')" title="상세 페이지로 이동">가명 사용자A</a></td>
+          <td>2026.04.10 09:15</td>
+          <td>-</td>
+          <td><span class="color-blue">[신청완료]</span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td class="popuser"><a href="javascript: popuser('sample-user-12')" title="상세 페이지로 이동">가명 사용자B</a></td>
+          <td>2026.04.10 09:30</td>
+          <td>-</td>
+          <td><span class="color-blue">[신청완료]</span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td class="popuser"><a href="javascript: popuser('sample-user-13')" title="상세 페이지로 이동">가명 사용자C</a></td>
+          <td>2026.04.10 10:00</td>
+          <td>-</td>
+          <td><span class="color-blue">[신청완료]</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    function popuser() {}
+    function applyCancel() {}
+  </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: system-ui, sans-serif;
+  background: #f6f8fb;
+  color: #18212f;
+}
+
+a {
+  color: #0b57d0;
+}
+
+button {
+  cursor: pointer;
+}
+
+.mock-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #d5deea;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.mock-toolbar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mock-toolbar__actions a,
+.mock-toolbar__actions button {
+  border: 1px solid #c7d2e2;
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  font-size: 14px;
+}
+
+.mock-meta {
+  margin-top: 6px;
+  color: #526277;
+  font-size: 13px;
+}
+
+#app {
+  margin-bottom: 16px;
+}
+
+.boardlist,
+.bbs-view-new,
+.mock-log {
+  padding: 16px;
+  border: 1px solid #d5deea;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.boardlist table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.boardlist td,
+.boardlist th {
+  padding: 10px 8px;
+  border-bottom: 1px solid #edf1f6;
+  vertical-align: top;
+}
+
+.tit .rel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.bbs-view-new {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.bbs-view-new .group {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+}
+
+.bbs-view-new .t {
+  font-weight: 700;
+}
+
+.mock-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.mock-buttons button {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #174ea6;
+  color: #fff;
+}
+
+.mock-log {
+  white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  min-height: 120px;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mock-page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 6px 10px;
+  border: 1px solid #c7d2e2;
+  border-radius: 999px;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+}
+
+.mock-page--active {
+  background: #d7e3ff;
+  border-color: #b6c9ef;
+  font-weight: 700;
+}

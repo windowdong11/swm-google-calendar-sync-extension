@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <title>SOMA Mock Test</title>
+    <link rel="stylesheet" href="/mock/mock.css">
+  </head>
+  <body data-scenario="index">
+    <div class="mock-toolbar">
+      <div>
+        <strong>SOMA mock runner</strong>
+        <div class="mock-meta">정적 서버에서 열면 신청/취소/동기화 흐름을 mock state로 재현할 수 있습니다.</div>
+      </div>
+      <div class="mock-toolbar__actions">
+        <a href="/mock/list.html">list.do</a>
+        <a href="/mock/history.html">history.do</a>
+        <a href="/mock/view-apply.html?qustnrSn=9888">view.do 신청</a>
+        <a href="/mock/view-cancel.html?qustnrSn=9439">view.do 취소</a>
+      </div>
+    </div>
+    <div class="boardlist">
+      <p>권장 실행 방법</p>
+      <p><code>python3 -m http.server 8000</code> 후 <code>http://localhost:8000/mock/index.html</code> 를 여세요.</p>
+      <p>각 페이지는 같은 mock state를 공유하므로, 한 페이지에서 신청/취소한 뒤 다른 페이지에서 결과를 이어서 확인할 수 있습니다.</p>
+    </div>
+  </body>
+</html>

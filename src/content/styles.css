@@ -1,0 +1,232 @@
+.soma-summary,
+.soma-filter-bar,
+.soma-query-bar,
+.soma-note {
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.soma-summary {
+  background: #f5f7fb;
+}
+
+.soma-filter-bar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #f9fafb;
+}
+
+.soma-query-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: #eef4ff;
+}
+
+.soma-query-bar__title,
+.soma-query-bar__meta {
+  width: 100%;
+}
+
+.soma-query-bar__title {
+  font-weight: 700;
+}
+
+.soma-query-bar__meta {
+  font-size: 12px;
+  color: #516074;
+}
+
+.soma-query-bar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: #516074;
+}
+
+.soma-query-bar__field input {
+  min-width: 140px;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #c7d5ee;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  color: #223;
+}
+
+.soma-query-bar__field input[type="number"] {
+  min-width: 88px;
+}
+
+.soma-query-bar__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.soma-filter-bar button {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: #e9eef8;
+  font-weight: 700;
+}
+
+.soma-query-bar button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  background: #d7e3ff;
+  font-weight: 700;
+}
+
+.soma-query-bar button[data-kind="secondary"] {
+  background: #e4eaf5;
+}
+
+.soma-filter-bar button.active {
+  background: #d7e3ff;
+}
+
+.soma-note {
+  background: #fff7e0;
+}
+
+.soma-badge {
+  margin-left: 8px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.soma-badge[data-status="overlap"] {
+  background: #fde8e8;
+}
+
+.soma-badge[data-status="adjacent"] {
+  background: #fff4d6;
+}
+
+.soma-badge[data-status="clear"] {
+  background: #e7f6ea;
+}
+
+.soma-badge[data-status="unknown"] {
+  background: #eef2f7;
+}
+
+.soma-panel-row td {
+  padding: 0 !important;
+}
+
+.soma-panel {
+  padding: 14px 16px;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+}
+
+.soma-panel-title {
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.soma-panel-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #eee;
+}
+
+.soma-panel-item:first-of-type {
+  border-top: 0;
+}
+
+.soma-panel-text {
+  line-height: 1.5;
+}
+
+.soma-panel-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.soma-link-btn,
+.soma-danger-btn {
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-decoration: none;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.soma-link-btn {
+  background: #eef4ff;
+  color: #234;
+}
+
+.soma-danger-btn {
+  border: 0;
+  background: #ffe6e6;
+  color: #a11;
+}
+
+
+.soma-auth-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eef4ff;
+  font-weight: 600;
+}
+
+.soma-auth-banner button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: #dbe8ff;
+  font-weight: 700;
+}
+
+.soma-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eef4ff;
+  font-weight: 600;
+}
+
+.soma-status-banner__text {
+  line-height: 1.4;
+}
+
+.soma-status-banner button {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  background: #dbe8ff;
+  font-weight: 700;
+}
