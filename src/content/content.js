@@ -254,7 +254,7 @@
     });
   }
 
-  function attachDecisionUI(row, lecture, decision, settings, registration, historyRegistrations, onDelete, onCancelLecture) {
+  function attachDecisionUI(row, lecture, decision, settings, registration, historyRegistrations, lectureMappings, onDelete, onCancelLecture) {
     const rel = row.querySelector("td.tit .rel");
     if (!rel) return;
 
@@ -278,13 +278,14 @@
       lecture,
       registration,
       historyRegistrations,
+      lectureMappings,
       onDelete,
       onCancelLecture,
       allowDirectDelete: settings.allowDirectDelete,
       allowConflictCancel: true,
       allowLectureCancel: true,
       showLectureActionRow: true,
-      showDetailLink: true,
+      showDetailLink: false,
       initiallyHidden: false
     });
     const panelId = `soma-panel-${lecture.id}`;
@@ -462,6 +463,19 @@
     return response.events;
   }
 
+  async function loadLectureMappings(qustnrSns = []) {
+    const response = await sendMessage({
+      type: "GET_LECTURE_MAPPINGS",
+      payload: { qustnrSns }
+    });
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "특강 매핑을 불러오지 못했습니다.");
+    }
+
+    return response.mappings || {};
+  }
+
   async function deleteEvent(calendarId, eventId) {
     const response = await sendMessage({ type: "DELETE_CALENDAR_EVENT", payload: { calendarId, eventId } });
     if (!response.ok) throw new Error(response.error || "일정 삭제에 실패했습니다.");
@@ -559,12 +573,19 @@
       .filter((decision) => decision.status === "OVERLAP")
       .map((decision) => decision.lectureId);
     let historyRegistrations = new Map();
+    let lectureMappings = {};
 
     if (overlapLectureIds.length > 0) {
       try {
         historyRegistrations = await LectureStatus.collectHistoryRegistrations();
       } catch (error) {
         console.warn("Failed to load history registrations:", error);
+      }
+
+      try {
+        lectureMappings = await loadLectureMappings();
+      } catch (error) {
+        console.warn("Failed to load lecture mappings:", error);
       }
     }
 
@@ -576,7 +597,7 @@
 
       const registration = historyRegistrations.get(lecture.id) || null;
 
-      attachDecisionUI(row, lecture, decision, settings, registration, historyRegistrations, async (calendarId, eventId) => {
+      attachDecisionUI(row, lecture, decision, settings, registration, historyRegistrations, lectureMappings, async (calendarId, eventId) => {
         try {
           if (settings.confirmBeforeDelete && !window.confirm("이 일정을 삭제하시겠습니까?")) return;
           await deleteEvent(calendarId, eventId);

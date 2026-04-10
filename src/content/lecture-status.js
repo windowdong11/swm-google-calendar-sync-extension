@@ -161,12 +161,55 @@
     return startTime.getTime() - Date.now() > 24 * 60 * 60 * 1000;
   }
 
-  function findOverlapLectureRegistration(event, currentLectureId, historyRegistrations) {
-    if (!event?.somaQustnrSn || !historyRegistrations?.size) {
+  function titlesMatchLecture(eventTitle, mapping) {
+    const normalizedEventTitle = normalizeText(eventTitle);
+    const normalizedMappingTitle = normalizeText(mapping?.title);
+    const normalizedMappingSummary = normalizeText(mapping?.summary);
+
+    if (!normalizedEventTitle) {
+      return false;
+    }
+
+    return normalizedEventTitle === normalizedMappingTitle || normalizedEventTitle === normalizedMappingSummary;
+  }
+
+  function resolveLectureIdFromMappings(event, lectureMappings = {}) {
+    const normalizedEventId = normalizeText(event?.id);
+    const normalizedStartAt = normalizeCalendarDateTime(event?.startAt || "");
+    const normalizedEndAt = normalizeCalendarDateTime(event?.endAt || "");
+
+    for (const [qustnrSn, mapping] of Object.entries(lectureMappings || {})) {
+      if (!mapping) continue;
+
+      if (normalizedEventId && normalizeText(mapping.eventId) === normalizedEventId) {
+        return qustnrSn;
+      }
+
+      if (
+        normalizedStartAt &&
+        normalizedEndAt &&
+        normalizeCalendarDateTime(mapping.startAt || "") === normalizedStartAt &&
+        normalizeCalendarDateTime(mapping.endAt || "") === normalizedEndAt &&
+        titlesMatchLecture(event?.title, mapping)
+      ) {
+        return qustnrSn;
+      }
+    }
+
+    return "";
+  }
+
+  function findOverlapLectureRegistration(event, currentLectureId, historyRegistrations, lectureMappings = {}) {
+    if (!historyRegistrations?.size) {
       return null;
     }
 
-    const registration = historyRegistrations.get(event.somaQustnrSn) || null;
+    const resolvedLectureId = normalizeText(event?.somaQustnrSn) || resolveLectureIdFromMappings(event, lectureMappings);
+    if (!resolvedLectureId) {
+      return null;
+    }
+
+    const registration = historyRegistrations.get(resolvedLectureId) || null;
     if (!registration || registration.qustnrSn === currentLectureId) {
       return null;
     }
@@ -190,10 +233,33 @@
     }
 
     if (event.isSomaLecture) {
-      return `${base} · SOMA 특강 일정`;
+      return `${base} · 소마 특강(확인 필요)`;
     }
 
     return base;
+  }
+
+  function appendPanelItem(panel, textContent, buildActions) {
+    const item = document.createElement("div");
+    item.className = "soma-panel-item";
+
+    const text = document.createElement("div");
+    text.className = "soma-panel-text";
+    text.textContent = textContent;
+    item.appendChild(text);
+
+    if (typeof buildActions === "function") {
+      const actions = document.createElement("div");
+      actions.className = "soma-panel-actions";
+      buildActions(actions);
+
+      if (actions.childElementCount > 0) {
+        item.appendChild(actions);
+      }
+    }
+
+    panel.appendChild(item);
+    return item;
   }
 
   function appendCalendarLink(actions, href, label) {
@@ -214,6 +280,7 @@
       lecture = {},
       registration = null,
       historyRegistrations = new Map(),
+      lectureMappings = {},
       currentLectureId = lecture.id || lecture.qustnrSn || "",
       onDelete,
       onCancelLecture,
@@ -237,103 +304,86 @@
       panel.appendChild(title);
 
       for (const event of decision.conflictingEvents) {
-        const item = document.createElement("div");
-        item.className = "soma-panel-item";
-        const overlapRegistration = findOverlapLectureRegistration(event, currentLectureId, historyRegistrations);
+        const overlapRegistration = findOverlapLectureRegistration(event, currentLectureId, historyRegistrations, lectureMappings);
+        appendPanelItem(panel, buildConflictEventText(event, overlapRegistration), (actions) => {
+          appendCalendarLink(actions, event.htmlLink, "캘린더에서 열기");
 
-        const text = document.createElement("div");
-        text.className = "soma-panel-text";
-        text.textContent = buildConflictEventText(event, overlapRegistration);
+          if (allowDirectDelete && typeof onDelete === "function") {
+            const delBtn = document.createElement("button");
+            delBtn.type = "button";
+            delBtn.className = "soma-danger-btn";
+            delBtn.textContent = "삭제";
+            delBtn.addEventListener("click", () => onDelete(event.calendarId, event.id));
+            actions.appendChild(delBtn);
+          }
 
-        const actions = document.createElement("div");
-        actions.className = "soma-panel-actions";
-
-        appendCalendarLink(actions, event.htmlLink, "캘린더에서 열기");
-
-        if (allowDirectDelete && typeof onDelete === "function") {
-          const delBtn = document.createElement("button");
-          delBtn.type = "button";
-          delBtn.className = "soma-danger-btn";
-          delBtn.textContent = "삭제";
-          delBtn.addEventListener("click", () => onDelete(event.calendarId, event.id));
-          actions.appendChild(delBtn);
-        }
-
-        if (allowConflictCancel && overlapRegistration && typeof onCancelLecture === "function") {
-          const cancelBtn = document.createElement("button");
-          cancelBtn.type = "button";
-          cancelBtn.className = "soma-danger-btn";
-          cancelBtn.textContent = "겹친 특강 취소";
-          cancelBtn.disabled = !overlapRegistration.applySn || !canCancelRegistration(overlapRegistration);
-          cancelBtn.addEventListener("click", () => onCancelLecture(overlapRegistration, cancelBtn));
-          actions.appendChild(cancelBtn);
-        }
-
-        item.appendChild(text);
-        if (actions.childElementCount > 0) {
-          item.appendChild(actions);
-        }
-        panel.appendChild(item);
+          if (allowConflictCancel && overlapRegistration && typeof onCancelLecture === "function") {
+            const cancelBtn = document.createElement("button");
+            cancelBtn.type = "button";
+            cancelBtn.className = "soma-danger-btn";
+            cancelBtn.textContent = "겹친 특강 취소";
+            cancelBtn.disabled = !overlapRegistration.applySn || !canCancelRegistration(overlapRegistration);
+            cancelBtn.addEventListener("click", () => onCancelLecture(overlapRegistration, cancelBtn));
+            actions.appendChild(cancelBtn);
+          }
+        });
       }
 
       if (showLectureActionRow) {
-        const lectureActionRow = document.createElement("div");
-        lectureActionRow.className = "soma-panel-item";
-
-        const lectureActionText = document.createElement("div");
-        lectureActionText.className = "soma-panel-text";
-
-        const lectureActionActions = document.createElement("div");
-        lectureActionActions.className = "soma-panel-actions";
-
-        if (showDetailLink) {
-          appendCalendarLink(lectureActionActions, lecture.url || lecture.detailUrl || "", "특강 상세 보기");
-        }
-
-        if (allowLectureCancel && registration && typeof onCancelLecture === "function") {
-          const cancelBtn = document.createElement("button");
-          cancelBtn.type = "button";
-          cancelBtn.className = "soma-danger-btn";
-          cancelBtn.textContent = "이 특강 취소";
-          cancelBtn.disabled = !registration.applySn || !canCancelRegistration(registration);
-          cancelBtn.addEventListener("click", () => onCancelLecture(registration, cancelBtn));
-          lectureActionActions.appendChild(cancelBtn);
-        }
+        let lectureActionText = "";
+        const canShowDetailLink = showDetailLink;
+        const canShowLectureCancel = allowLectureCancel && registration && typeof onCancelLecture === "function";
 
         if (registration) {
-          lectureActionText.textContent = registration.applySn
+          lectureActionText = registration.applySn
             ? canCancelRegistration(registration)
-              ? "이미 신청한 특강입니다. 특강 취소 후 접수내역 기준으로 다시 동기화할 수 있습니다."
-              : "특강 시작 24시간 이내라서 여기서는 취소할 수 없습니다."
-            : "현재 접수내역 기준으로는 이 특강을 바로 취소할 수 없습니다.";
-        } else if (showDetailLink || allowLectureCancel) {
-          lectureActionText.textContent = "접수내역에 없는 특강이라서 여기서 바로 취소할 수 없습니다.";
+              ? "신청한 특강입니다. 취소하면 캘린더도 다시 동기화됩니다."
+              : "시작 24시간 이내라서 여기서 취소할 수 없습니다."
+            : "접수내역 기준으로는 여기서 취소할 수 없습니다.";
         }
 
-        if (lectureActionText.textContent || lectureActionActions.childElementCount > 0) {
-          lectureActionRow.appendChild(lectureActionText);
-          if (lectureActionActions.childElementCount > 0) {
-            lectureActionRow.appendChild(lectureActionActions);
-          }
-          panel.appendChild(lectureActionRow);
+        if (lectureActionText || canShowDetailLink || canShowLectureCancel) {
+          appendPanelItem(panel, lectureActionText, (actions) => {
+            if (canShowDetailLink) {
+              appendCalendarLink(actions, lecture.url || lecture.detailUrl || "", "특강 상세 보기");
+            }
+
+            if (canShowLectureCancel) {
+              const cancelBtn = document.createElement("button");
+              cancelBtn.type = "button";
+              cancelBtn.className = "soma-danger-btn";
+              cancelBtn.textContent = "이 특강 취소";
+              cancelBtn.disabled = !registration.applySn || !canCancelRegistration(registration);
+              cancelBtn.addEventListener("click", () => onCancelLecture(registration, cancelBtn));
+              actions.appendChild(cancelBtn);
+            }
+          });
         }
       }
     } else if (decision.status === "BACK_TO_BACK_PREV" && decision.adjacentPreviousEvent) {
       const title = document.createElement("div");
       title.className = "soma-panel-title";
-      title.textContent = "직전 일정과 바로 이어집니다";
+      title.textContent = "바로 앞 일정 1개";
       panel.appendChild(title);
 
-      const text = document.createElement("div");
-      text.className = "soma-panel-text";
-      text.textContent = `${decision.adjacentPreviousEvent.title} · 간격 ${decision.gapMinutes || 0}분`;
-      panel.appendChild(text);
+      appendPanelItem(
+        panel,
+        `${decision.adjacentPreviousEvent.title} (${formatDateTime(decision.adjacentPreviousEvent.startAt)} ~ ${formatDateTime(decision.adjacentPreviousEvent.endAt)}) · 간격 ${decision.gapMinutes || 0}분`,
+        (actions) => {
+          appendCalendarLink(actions, decision.adjacentPreviousEvent.htmlLink, "캘린더에서 열기");
+        }
+      );
 
-      if (decision.adjacentPreviousEvent.htmlLink) {
-        const actions = document.createElement("div");
-        actions.className = "soma-panel-actions";
-        appendCalendarLink(actions, decision.adjacentPreviousEvent.htmlLink, "직전 일정 보기");
-        panel.appendChild(actions);
+      if (showLectureActionRow) {
+        const nextStepText = (decision.gapMinutes || 0) > 0
+          ? `이전 일정 종료 후 ${decision.gapMinutes}분 뒤 시작합니다. 이동/준비 시간을 확인해 주세요.`
+          : "이전 일정 종료 직후 시작합니다. 이동/준비 시간을 확인해 주세요.";
+
+        appendPanelItem(panel, nextStepText, (actions) => {
+          if (showDetailLink) {
+            appendCalendarLink(actions, lecture.url || lecture.detailUrl || "", "특강 상세 보기");
+          }
+        });
       }
     } else if (decision.status === "UNKNOWN") {
       const text = document.createElement("div");
