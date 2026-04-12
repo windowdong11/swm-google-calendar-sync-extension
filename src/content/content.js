@@ -10,6 +10,7 @@
     statusBannerClass: "soma-status-banner"
   };
   const LectureStatus = globalThis.SomaLectureStatus;
+  const NATIVE_LIST_FILTER_LABELS = ["전체", "접수중", "마감", "자유 멘토링", "멘토 특강"];
 
   if (!LectureStatus) {
     throw new Error("SomaLectureStatus helper를 찾지 못했습니다.");
@@ -94,15 +95,29 @@
 
   function getCurrentListDateRangeForNavigation() {
     const currentQuery = getListQueryState();
+    const hasCurrentDateRange = Boolean(currentQuery.scdate && currentQuery.ecdate);
     const startInputValue = normalizeDateQueryValue(document.querySelector(`.${EXT.queryBarClass} input[aria-label="시작일"]`)?.value);
     const endInputValue = normalizeDateQueryValue(document.querySelector(`.${EXT.queryBarClass} input[aria-label="종료일"]`)?.value);
 
-    return resolveListDateRange(startInputValue || currentQuery.scdate, endInputValue || currentQuery.ecdate);
+    if (!hasCurrentDateRange && startInputValue && endInputValue) {
+      const defaults = getDefaultListDateRange();
+      if (startInputValue !== defaults.scdate || endInputValue !== defaults.ecdate) {
+        return { scdate: startInputValue, ecdate: endInputValue };
+      }
+    }
+
+    return hasCurrentDateRange ? { scdate: currentQuery.scdate, ecdate: currentQuery.ecdate } : { scdate: "", ecdate: "" };
   }
 
   function buildUrlPreservingCurrentListDateRange(href) {
     const url = new URL(href, location.href);
     const resolvedDateRange = getCurrentListDateRangeForNavigation();
+
+    if (!resolvedDateRange.scdate || !resolvedDateRange.ecdate) {
+      url.searchParams.delete("scdate");
+      url.searchParams.delete("ecdate");
+      return url.toString();
+    }
 
     url.searchParams.set("scdate", resolvedDateRange.scdate);
     url.searchParams.set("ecdate", resolvedDateRange.ecdate);
@@ -134,6 +149,8 @@
 
   function preserveListDateRangeOnFormSubmit(form) {
     const resolvedDateRange = getCurrentListDateRangeForNavigation();
+    if (!resolvedDateRange.scdate || !resolvedDateRange.ecdate) return;
+
     setFormFieldValue(form, "scdate", resolvedDateRange.scdate);
     setFormFieldValue(form, "ecdate", resolvedDateRange.ecdate);
     preserveDateRangeInPageQueryString(form, resolvedDateRange);
@@ -163,7 +180,7 @@
 
       const control = target.closest('a, button, input[type="button"], input[type="submit"], [role="button"], li') || target;
       const label = normalizeText(control instanceof HTMLInputElement ? control.value : control.textContent);
-      const isStatusFilterClick = ["전체", "접수중", "마감"].some((statusLabel) => label.includes(statusLabel));
+      const isStatusFilterClick = NATIVE_LIST_FILTER_LABELS.some((filterLabel) => label.includes(filterLabel));
       if (!isStatusFilterClick) return;
 
       preserveListDateRangeOnStatusFilterForms();
@@ -191,21 +208,6 @@
 
       preserveListDateRangeOnFormSubmit(form);
     }, true);
-  }
-
-  function ensureListDateRangeQuery() {
-    const currentQuery = getListQueryState();
-    const resolvedDateRange = resolveListDateRange(currentQuery.scdate, currentQuery.ecdate);
-
-    if (currentQuery.scdate === resolvedDateRange.scdate && currentQuery.ecdate === resolvedDateRange.ecdate) {
-      return false;
-    }
-
-    location.replace(buildListPageUrl({
-      ...resolvedDateRange,
-      pageIndex: currentQuery.pageIndex
-    }));
-    return true;
   }
 
   function renderListQueryBar(host) {
@@ -724,10 +726,6 @@
 
     const host = getHost();
     installNativeStatusFilterDateRangePreserver();
-
-    if (ensureListDateRangeQuery()) {
-      return;
-    }
 
     renderListQueryBar(host);
 
