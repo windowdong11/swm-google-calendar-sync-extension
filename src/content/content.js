@@ -92,6 +92,107 @@
     return url.toString();
   }
 
+  function getCurrentListDateRangeForNavigation() {
+    const currentQuery = getListQueryState();
+    const startInputValue = normalizeDateQueryValue(document.querySelector(`.${EXT.queryBarClass} input[aria-label="시작일"]`)?.value);
+    const endInputValue = normalizeDateQueryValue(document.querySelector(`.${EXT.queryBarClass} input[aria-label="종료일"]`)?.value);
+
+    return resolveListDateRange(startInputValue || currentQuery.scdate, endInputValue || currentQuery.ecdate);
+  }
+
+  function buildUrlPreservingCurrentListDateRange(href) {
+    const url = new URL(href, location.href);
+    const resolvedDateRange = getCurrentListDateRangeForNavigation();
+
+    url.searchParams.set("scdate", resolvedDateRange.scdate);
+    url.searchParams.set("ecdate", resolvedDateRange.ecdate);
+    return url.toString();
+  }
+
+  function setFormFieldValue(form, name, value) {
+    let input = form.querySelector(`[name="${name}"]`);
+
+    if (!input) {
+      input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      form.appendChild(input);
+    }
+
+    input.value = value;
+  }
+
+  function preserveDateRangeInPageQueryString(form, resolvedDateRange) {
+    const input = form.querySelector('[name="pageQueryString"]');
+    if (!input) return;
+
+    const query = new URLSearchParams(input.value || "");
+    query.set("scdate", resolvedDateRange.scdate);
+    query.set("ecdate", resolvedDateRange.ecdate);
+    input.value = query.toString();
+  }
+
+  function preserveListDateRangeOnFormSubmit(form) {
+    const resolvedDateRange = getCurrentListDateRangeForNavigation();
+    setFormFieldValue(form, "scdate", resolvedDateRange.scdate);
+    setFormFieldValue(form, "ecdate", resolvedDateRange.ecdate);
+    preserveDateRangeInPageQueryString(form, resolvedDateRange);
+
+    const action = form.getAttribute("action");
+    if (action) {
+      form.setAttribute("action", buildUrlPreservingCurrentListDateRange(action));
+    }
+  }
+
+  function preserveListDateRangeOnStatusFilterForms() {
+    document.querySelectorAll('form [name="searchStatMentolec"]').forEach((field) => {
+      const form = field.closest("form");
+      if (form) {
+        preserveListDateRangeOnFormSubmit(form);
+      }
+    });
+  }
+
+  function installNativeStatusFilterDateRangePreserver() {
+    if (document.documentElement.dataset.somaStatusFilterPreserver === "1") return;
+    document.documentElement.dataset.somaStatusFilterPreserver = "1";
+
+    document.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+
+      const control = target.closest('a, button, input[type="button"], input[type="submit"], [role="button"], li') || target;
+      const label = normalizeText(control instanceof HTMLInputElement ? control.value : control.textContent);
+      const isStatusFilterClick = ["전체", "접수중", "마감"].some((statusLabel) => label.includes(statusLabel));
+      if (!isStatusFilterClick) return;
+
+      preserveListDateRangeOnStatusFilterForms();
+
+      const form = control.closest("form");
+      if (form) {
+        preserveListDateRangeOnFormSubmit(form);
+      }
+
+      const anchor = control.closest("a[href]");
+      if (!anchor) return;
+
+      const href = anchor.getAttribute("href") || "";
+      if (!href || href.startsWith("#") || href.startsWith("javascript:")) return;
+
+      anchor.href = buildUrlPreservingCurrentListDateRange(href);
+    }, true);
+
+    document.addEventListener("submit", (event) => {
+      const form = event.target instanceof HTMLFormElement ? event.target : null;
+      if (!form) return;
+
+      const hasStatusFilterField = !!form.querySelector('[name="searchStatMentolec"]');
+      if (!hasStatusFilterField) return;
+
+      preserveListDateRangeOnFormSubmit(form);
+    }, true);
+  }
+
   function ensureListDateRangeQuery() {
     const currentQuery = getListQueryState();
     const resolvedDateRange = resolveListDateRange(currentQuery.scdate, currentQuery.ecdate);
@@ -622,6 +723,8 @@
     }
 
     const host = getHost();
+    installNativeStatusFilterDateRangePreserver();
+
     if (ensureListDateRangeQuery()) {
       return;
     }
