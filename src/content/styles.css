@@ -60,6 +60,24 @@
   color: #223;
 }
 
+.soma-query-bar__date-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.soma-query-bar__date-controls input {
+  flex: 1 1 140px;
+}
+
+.soma-query-bar .soma-query-bar__date-step {
+  min-height: 34px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
 .soma-query-bar__field input[type="number"] {
   min-width: 88px;
 }
@@ -81,7 +99,7 @@
 
 .soma-query-bar button {
   border: 0;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
   background: #d7e3ff;

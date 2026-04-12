@@ -84,10 +84,6 @@
   }
 
   function resolveListDateRange(scdate, ecdate, now = new Date(DEFAULT_FIXED_NOW)) {
-    if (!scdate && !ecdate) {
-      return { scdate: "", ecdate: "" };
-    }
-
     const defaults = getDefaultListDateRange(now);
     return {
       scdate: scdate || defaults.scdate,

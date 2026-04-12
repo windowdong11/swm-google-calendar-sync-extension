@@ -36,6 +36,14 @@
     return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
   }
 
+  function addDaysToDateInputValue(value, days, fallbackValue) {
+    const baseValue = normalizeDateQueryValue(value) || fallbackValue;
+    const [year, month, day] = baseValue.split("-").map((part) => Number.parseInt(part, 10));
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() + days);
+    return formatDateInputValue(date);
+  }
+
   function getDefaultListDateRange(now = new Date()) {
     return {
       scdate: formatDateInputValue(now),
@@ -44,10 +52,6 @@
   }
 
   function resolveListDateRange(scdate, ecdate, now = new Date()) {
-    if (!scdate && !ecdate) {
-      return { scdate: "", ecdate: "" };
-    }
-
     const defaults = getDefaultListDateRange(now);
     return {
       scdate: scdate || defaults.scdate,
@@ -88,6 +92,21 @@
     return url.toString();
   }
 
+  function ensureListDateRangeQuery() {
+    const currentQuery = getListQueryState();
+    const resolvedDateRange = resolveListDateRange(currentQuery.scdate, currentQuery.ecdate);
+
+    if (currentQuery.scdate === resolvedDateRange.scdate && currentQuery.ecdate === resolvedDateRange.ecdate) {
+      return false;
+    }
+
+    location.replace(buildListPageUrl({
+      ...resolvedDateRange,
+      pageIndex: currentQuery.pageIndex
+    }));
+    return true;
+  }
+
   function renderListQueryBar(host) {
     host.querySelector(`.${EXT.queryBarClass}`)?.remove();
 
@@ -101,24 +120,54 @@
     title.textContent = "날짜 기준 목록 조회";
     bar.appendChild(title);
 
-    const startField = document.createElement("label");
+    function appendDateStepButton(targetInput, days, label, fallbackValue) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "soma-query-bar__date-step";
+      button.textContent = label;
+      button.addEventListener("click", () => {
+        targetInput.value = addDaysToDateInputValue(targetInput.value, days, fallbackValue);
+        targetInput.focus();
+      });
+      return button;
+    }
+
+    const startField = document.createElement("div");
     startField.className = "soma-query-bar__field";
-    startField.textContent = "시작일";
+    const startLabel = document.createElement("span");
+    startLabel.textContent = "시작일";
+    startField.appendChild(startLabel);
 
     const startInput = document.createElement("input");
     startInput.type = "date";
     startInput.value = currentQuery.scdate || defaultDateRange.scdate;
-    startField.appendChild(startInput);
+    startInput.setAttribute("aria-label", "시작일");
+
+    const startControls = document.createElement("div");
+    startControls.className = "soma-query-bar__date-controls";
+    startControls.appendChild(appendDateStepButton(startInput, -1, "-1일", defaultDateRange.scdate));
+    startControls.appendChild(startInput);
+    startControls.appendChild(appendDateStepButton(startInput, 1, "+1일", defaultDateRange.scdate));
+    startField.appendChild(startControls);
     bar.appendChild(startField);
 
-    const endField = document.createElement("label");
+    const endField = document.createElement("div");
     endField.className = "soma-query-bar__field";
-    endField.textContent = "종료일";
+    const endLabel = document.createElement("span");
+    endLabel.textContent = "종료일";
+    endField.appendChild(endLabel);
 
     const endInput = document.createElement("input");
     endInput.type = "date";
     endInput.value = currentQuery.ecdate || defaultDateRange.ecdate;
-    endField.appendChild(endInput);
+    endInput.setAttribute("aria-label", "종료일");
+
+    const endControls = document.createElement("div");
+    endControls.className = "soma-query-bar__date-controls";
+    endControls.appendChild(appendDateStepButton(endInput, -1, "-1일", defaultDateRange.ecdate));
+    endControls.appendChild(endInput);
+    endControls.appendChild(appendDateStepButton(endInput, 1, "+1일", defaultDateRange.ecdate));
+    endField.appendChild(endControls);
     bar.appendChild(endField);
 
     const actions = document.createElement("div");
@@ -155,6 +204,17 @@
     applyDateButton.addEventListener("click", () => applyQuery({ keepPageIndex: false }));
     actions.appendChild(applyDateButton);
 
+    const todayOnlyButton = document.createElement("button");
+    todayOnlyButton.type = "button";
+    todayOnlyButton.textContent = "오늘만";
+    todayOnlyButton.dataset.kind = "secondary";
+    todayOnlyButton.addEventListener("click", () => {
+      const today = getDefaultListDateRange().scdate;
+      startInput.value = today;
+      endInput.value = today;
+    });
+    actions.appendChild(todayOnlyButton);
+
     const resetButton = document.createElement("button");
     resetButton.type = "button";
     resetButton.textContent = "초기화";
@@ -181,7 +241,7 @@
 
     const meta = document.createElement("div");
     meta.className = "soma-query-bar__meta";
-    meta.textContent = "한쪽만 입력하면 시작일은 오늘, 종료일은 이번 달 말일로 보정해 scdate, ecdate를 함께 보냅니다.";
+    meta.textContent = "기본 조회 범위는 오늘부터 이번 달 말일까지입니다. 한쪽만 입력하면 비어 있는 날짜도 기본 범위로 보정합니다.";
     bar.appendChild(meta);
 
     host.prepend(bar);
@@ -562,6 +622,10 @@
     }
 
     const host = getHost();
+    if (ensureListDateRangeQuery()) {
+      return;
+    }
+
     renderListQueryBar(host);
 
     const lectures = parseLecturesFromPage(document);
