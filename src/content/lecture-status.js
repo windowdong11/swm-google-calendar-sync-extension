@@ -229,7 +229,7 @@
     }
 
     if (overlapRegistration) {
-      return `${base} · 신청한 다른 특강(여기서 취소 불가)`;
+      return `${base} · 신청한 다른 특강(취소 정보가 없어 여기서 취소 불가)`;
     }
 
     if (event.isSomaLecture) {
@@ -339,7 +339,7 @@
             ? canCancelRegistration(registration)
               ? "신청한 특강입니다. 취소하면 캘린더도 다시 동기화됩니다."
               : "시작 24시간 이내라서 여기서 취소할 수 없습니다."
-            : "접수내역 기준으로는 여기서 취소할 수 없습니다.";
+            : "접수내역에 취소 정보가 없어 여기서 취소할 수 없습니다.";
         }
 
         if (lectureActionText || canShowDetailLink || canShowLectureCancel) {

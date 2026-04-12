@@ -28,6 +28,33 @@
     return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
   }
 
+  function padTwo(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatDateInputValue(date) {
+    return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
+  }
+
+  function getDefaultListDateRange(now = new Date()) {
+    return {
+      scdate: formatDateInputValue(now),
+      ecdate: formatDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+    };
+  }
+
+  function resolveListDateRange(scdate, ecdate, now = new Date()) {
+    if (!scdate && !ecdate) {
+      return { scdate: "", ecdate: "" };
+    }
+
+    const defaults = getDefaultListDateRange(now);
+    return {
+      scdate: scdate || defaults.scdate,
+      ecdate: ecdate || defaults.ecdate
+    };
+  }
+
   function parsePositiveInt(value, fallback = 1) {
     const parsed = Number.parseInt(String(value || ""), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -43,15 +70,16 @@
 
   function buildListPageUrl({ scdate = "", ecdate = "", pageIndex = 1 } = {}) {
     const url = new URL(location.href);
+    const resolvedDateRange = resolveListDateRange(scdate, ecdate);
 
-    if (scdate) {
-      url.searchParams.set("scdate", scdate);
+    if (resolvedDateRange.scdate) {
+      url.searchParams.set("scdate", resolvedDateRange.scdate);
     } else {
       url.searchParams.delete("scdate");
     }
 
-    if (ecdate) {
-      url.searchParams.set("ecdate", ecdate);
+    if (resolvedDateRange.ecdate) {
+      url.searchParams.set("ecdate", resolvedDateRange.ecdate);
     } else {
       url.searchParams.delete("ecdate");
     }
@@ -64,6 +92,7 @@
     host.querySelector(`.${EXT.queryBarClass}`)?.remove();
 
     const currentQuery = getListQueryState();
+    const defaultDateRange = getDefaultListDateRange();
     const bar = document.createElement("div");
     bar.className = EXT.queryBarClass;
 
@@ -78,7 +107,7 @@
 
     const startInput = document.createElement("input");
     startInput.type = "date";
-    startInput.value = currentQuery.scdate;
+    startInput.value = currentQuery.scdate || defaultDateRange.scdate;
     startField.appendChild(startInput);
     bar.appendChild(startField);
 
@@ -88,7 +117,7 @@
 
     const endInput = document.createElement("input");
     endInput.type = "date";
-    endInput.value = currentQuery.ecdate;
+    endInput.value = currentQuery.ecdate || defaultDateRange.ecdate;
     endField.appendChild(endInput);
     bar.appendChild(endField);
 
@@ -104,9 +133,12 @@
     }
 
     function applyQuery({ keepPageIndex }) {
-      const nextQuery = {
+      const inputDateRange = {
         scdate: normalizeDateQueryValue(startInput.value),
-        ecdate: normalizeDateQueryValue(endInput.value),
+        ecdate: normalizeDateQueryValue(endInput.value)
+      };
+      const nextQuery = {
+        ...resolveListDateRange(inputDateRange.scdate, inputDateRange.ecdate),
         pageIndex: keepPageIndex ? currentQuery.pageIndex : 1
       };
 
@@ -149,7 +181,7 @@
 
     const meta = document.createElement("div");
     meta.className = "soma-query-bar__meta";
-    meta.textContent = "URL 쿼리 scdate, ecdate를 이용해 목록 조건을 바꾸고, pageIndex는 기존 페이지 버튼을 그대로 사용합니다.";
+    meta.textContent = "한쪽만 입력하면 시작일은 오늘, 종료일은 이번 달 말일로 보정해 scdate, ecdate를 함께 보냅니다.";
     bar.appendChild(meta);
 
     host.prepend(bar);
@@ -608,7 +640,7 @@
       }, async (selectedRegistration, sourceButton) => {
         try {
           if (!selectedRegistration.applySn) {
-            window.alert("현재 접수내역 기준으로는 이 특강을 취소할 수 없습니다.");
+            window.alert("현재 접수내역에 취소 정보가 없어 이 특강을 취소할 수 없습니다.");
             return;
           }
           if (!LectureStatus.canCancelRegistration(selectedRegistration)) {

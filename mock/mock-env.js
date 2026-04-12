@@ -68,6 +68,33 @@
     return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
   }
 
+  function padTwo(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function formatDateInputValue(date) {
+    return `${date.getFullYear()}-${padTwo(date.getMonth() + 1)}-${padTwo(date.getDate())}`;
+  }
+
+  function getDefaultListDateRange(now = new Date(DEFAULT_FIXED_NOW)) {
+    return {
+      scdate: formatDateInputValue(now),
+      ecdate: formatDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+    };
+  }
+
+  function resolveListDateRange(scdate, ecdate, now = new Date(DEFAULT_FIXED_NOW)) {
+    if (!scdate && !ecdate) {
+      return { scdate: "", ecdate: "" };
+    }
+
+    const defaults = getDefaultListDateRange(now);
+    return {
+      scdate: scdate || defaults.scdate,
+      ecdate: ecdate || defaults.ecdate
+    };
+  }
+
   function parsePositiveInt(value, fallback = 1) {
     const parsed = Number.parseInt(String(value || ""), 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -91,18 +118,20 @@
         ? new URL(urlLike.toString())
         : new URL(String(urlLike), location.href);
     const nextUrl = new URL(baseUrl.toString());
-    const scdate = normalizeDateQueryValue(overrides.scdate ?? nextUrl.searchParams.get("scdate"));
-    const ecdate = normalizeDateQueryValue(overrides.ecdate ?? nextUrl.searchParams.get("ecdate"));
+    const resolvedDateRange = resolveListDateRange(
+      normalizeDateQueryValue(overrides.scdate ?? nextUrl.searchParams.get("scdate")),
+      normalizeDateQueryValue(overrides.ecdate ?? nextUrl.searchParams.get("ecdate"))
+    );
     const pageIndex = parsePositiveInt(overrides.pageIndex ?? nextUrl.searchParams.get("pageIndex"), 1);
 
-    if (scdate) {
-      nextUrl.searchParams.set("scdate", scdate);
+    if (resolvedDateRange.scdate) {
+      nextUrl.searchParams.set("scdate", resolvedDateRange.scdate);
     } else {
       nextUrl.searchParams.delete("scdate");
     }
 
-    if (ecdate) {
-      nextUrl.searchParams.set("ecdate", ecdate);
+    if (resolvedDateRange.ecdate) {
+      nextUrl.searchParams.set("ecdate", resolvedDateRange.ecdate);
     } else {
       nextUrl.searchParams.delete("ecdate");
     }
@@ -113,6 +142,7 @@
 
   function getVisibleListLectures(state, url = new URL(location.href)) {
     const query = getListQueryState(url);
+    const hasDateRangeQuery = Boolean(query.scdate && query.ecdate);
     const sortedLectures = Object.values(state.lectures)
       .filter((lecture) => lecture.qustnrSn !== "9777")
       .sort((left, right) => {
@@ -120,12 +150,14 @@
         return byStartAt || left.qustnrSn.localeCompare(right.qustnrSn);
       });
 
-    const filteredLectures = sortedLectures.filter((lecture) => {
-      const lectureDate = getLectureDateKey(lecture);
-      if (query.scdate && lectureDate < query.scdate) return false;
-      if (query.ecdate && lectureDate > query.ecdate) return false;
-      return true;
-    });
+    const filteredLectures = hasDateRangeQuery
+      ? sortedLectures.filter((lecture) => {
+          const lectureDate = getLectureDateKey(lecture);
+          if (lectureDate < query.scdate) return false;
+          if (lectureDate > query.ecdate) return false;
+          return true;
+        })
+      : sortedLectures;
 
     const totalCount = filteredLectures.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / LIST_PAGE_SIZE));
