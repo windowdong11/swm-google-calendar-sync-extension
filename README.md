@@ -21,9 +21,9 @@
 
 확장 프로그램은 아래 SWM 페이지에서만 실행됩니다.
 
-- 특강 목록: `https://www.swmaestro.ai/sw/mypage/mentoLec/list.do*`
-- 특강 상세/신청: `https://www.swmaestro.ai/sw/mypage/mentoLec/view.do*`
-- 접수내역: `https://www.swmaestro.ai/sw/mypage/userAnswer/history.do*`
+- 특강 목록: `https://swmaestro.ai/sw/mypage/mentoLec/list.do*`, `https://www.swmaestro.ai/sw/mypage/mentoLec/list.do*`
+- 특강 상세/신청: `https://swmaestro.ai/sw/mypage/mentoLec/view.do*`, `https://www.swmaestro.ai/sw/mypage/mentoLec/view.do*`
+- 접수내역: `https://swmaestro.ai/sw/mypage/userAnswer/history.do*`, `https://www.swmaestro.ai/sw/mypage/userAnswer/history.do*`
 
 ## 빠른 시작
 

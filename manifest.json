@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SOMA Schedule Helper",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "소마 특강과 구글 캘린더 일정을 비교해 보여주는 확장프로그램",
   "icons": {
     "16": "icons/image.png",
@@ -12,6 +12,7 @@
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0pr1BGdZ/ylvSnPxRZ2jJOfIINEOn1yK2GXZ9COZrTCaTKlHDJd+Q+u+xzyeEJpsNLxjHjWVgZigu0A7IWmnSzNcrdoxaUKmQx/7acfuc9chMaZ60BGOks6ekbmxIWNo9dSfgWj1nmXyFbMfFjRm1kq9pWyFRzGqdlQxPBoz3SUZnLKz1wF+W95XVTPAcvaeXQk/dfgEjEIEff1wH7GrYWAjqLrrozW/emi7GlfpIMCVqyaH9JOxEoa84YLWm0zbaVns4/8pxWj3ox32EdqvyhZKSTusfZ8vNv3aQmWCpNBhW0zjsxTIB4SWMQ2jgrxcErY0zQlhKMXhjpjzYysCwIDAQAB",
   "permissions": ["storage", "identity"],
   "host_permissions": [
+    "https://swmaestro.ai/*",
     "https://www.swmaestro.ai/*",
     "https://www.googleapis.com/*"
   ],
@@ -27,19 +28,28 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.swmaestro.ai/sw/mypage/mentoLec/list.do*"],
+      "matches": [
+        "https://swmaestro.ai/sw/mypage/mentoLec/list.do*",
+        "https://www.swmaestro.ai/sw/mypage/mentoLec/list.do*"
+      ],
       "js": ["src/content/parsers.js", "src/content/lecture-status.js", "src/content/content.js"],
       "css": ["src/content/styles.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.swmaestro.ai/sw/mypage/mentoLec/view.do*"],
+      "matches": [
+        "https://swmaestro.ai/sw/mypage/mentoLec/view.do*",
+        "https://www.swmaestro.ai/sw/mypage/mentoLec/view.do*"
+      ],
       "js": ["src/content/parsers.js", "src/content/lecture-status.js", "src/content/apply.js"],
       "css": ["src/content/styles.css"],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://www.swmaestro.ai/sw/mypage/userAnswer/history.do*"],
+      "matches": [
+        "https://swmaestro.ai/sw/mypage/userAnswer/history.do*",
+        "https://www.swmaestro.ai/sw/mypage/userAnswer/history.do*"
+      ],
       "js": ["src/content/parsers.js", "src/content/history.js"],
       "run_at": "document_idle"
     }
