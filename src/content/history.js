@@ -6,8 +6,13 @@
     actionsClass: "soma-history-sync-actions",
     buttonClass: "soma-history-sync-button"
   };
+  const Parsers = globalThis.SomaParsers;
 
   let syncInFlight = false;
+
+  if (!Parsers) {
+    throw new Error("SomaParsers helper를 찾지 못했습니다.");
+  }
 
   function sendMessage(message) {
     return chrome.runtime.sendMessage(message);
@@ -158,107 +163,15 @@
   }
 
   function parseLectureDateText(raw) {
-    const normalized = normalizeText(raw);
-    const dateMatch = normalized.match(/(\d{4})-(\d{2})-(\d{2})/);
-    const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)];
-
-    if (!dateMatch || timeMatches.length < 2) {
-      return null;
-    }
-
-    const [, year, month, day] = dateMatch;
-    const lectureDate = `${year}-${month}-${day}`;
-    return {
-      lectureDate,
-      startAt: buildSeoulIsoDateTime(lectureDate, timeMatches[0][1], timeMatches[0][2], timeMatches[0][3]),
-      endAt: buildSeoulIsoDateTime(lectureDate, timeMatches[1][1], timeMatches[1][2], timeMatches[1][3])
-    };
+    return Parsers.parseHistoryDateText(raw);
   }
 
   function parseHistoryRow(row) {
-    const cells = Array.from(row.querySelectorAll("td"));
-    if (cells.length < 7) return null;
-
-    const statusText = normalizeText(cells[6]?.textContent);
-    const historyStateText = normalizeText(cells[8]?.textContent);
-    const isActive = statusText.includes("접수완료");
-    const isRemoved = historyStateText.includes("삭제");
-
-    if (!isActive && !isRemoved) {
-      return null;
-    }
-
-    const titleCell = row.querySelector("td.tit");
-    const title = normalizeText(titleCell?.textContent);
-    const link = titleCell?.querySelector("a");
-    const href = link?.getAttribute("href") || "";
-    const qustnrSn = href.match(/qustnrSn=(\d+)/)?.[1] || "";
-    const detailUrl = href ? new URL(href, location.origin).toString() : "";
-    const rawDateText = normalizeText(cells[4]?.textContent || "");
-    const schedule = parseLectureDateText(rawDateText);
-
-    if (!title || !schedule || (isActive && !qustnrSn)) {
-      const reasons = [];
-      if (!title) reasons.push("title");
-      if (!qustnrSn && isActive) reasons.push("qustnrSn");
-      if (!schedule) reasons.push("schedule");
-
-      return {
-        incomplete: true,
-        debug: {
-          title,
-          href,
-          qustnrSn,
-          rawDateText,
-          statusText,
-          reasons
-        }
-      };
-    }
-
-    const lecture = {
-      qustnrSn: qustnrSn || "",
-      title,
-      detailUrl,
-      lectureDate: schedule.lectureDate,
-      startAt: schedule.startAt,
-      endAt: schedule.endAt
-    };
-
-    if (isRemoved) {
-      return {
-        inactiveLecture: lecture
-      };
-    }
-
-    return {
-      lecture
-    };
+    return Parsers.parseHistoryRow(row, { origin: location.origin });
   }
 
   function parseHistoryDocument(doc) {
-    const rows = Array.from(doc.querySelectorAll(".boardlist table tbody tr"));
-    const lectures = [];
-    const inactiveLectures = [];
-    let incomplete = false;
-    const incompleteRows = [];
-
-    for (const row of rows) {
-      const parsed = parseHistoryRow(row);
-      if (!parsed) continue;
-      if (parsed.incomplete) {
-        incomplete = true;
-        incompleteRows.push(parsed.debug);
-        continue;
-      }
-      if (parsed.inactiveLecture) {
-        inactiveLectures.push(parsed.inactiveLecture);
-        continue;
-      }
-      lectures.push(parsed.lecture);
-    }
-
-    return { lectures, inactiveLectures, incomplete, incompleteRows };
+    return Parsers.parseHistoryDocument(doc, { origin: location.origin });
   }
 
   function getLastPage(doc) {
@@ -314,14 +227,7 @@
   }
 
   function findGroupValue(doc, label) {
-    const groups = Array.from(doc.querySelectorAll(".bbs-view-new .group"));
-    for (const group of groups) {
-      const title = normalizeText(group.querySelector(".t")?.textContent);
-      if (title === label) {
-        return normalizeText(group.querySelector(".c")?.textContent);
-      }
-    }
-    return "";
+    return Parsers.findGroupValue(doc, label);
   }
 
   async function enrichLecturesWithDetails(lectures, mappings) {

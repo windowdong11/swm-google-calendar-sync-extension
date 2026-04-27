@@ -6,9 +6,13 @@
     detailStatusNoteClass: "soma-detail-status-note"
   };
   const LectureStatus = globalThis.SomaLectureStatus;
+  const Parsers = globalThis.SomaParsers;
 
   if (!LectureStatus) {
     throw new Error("SomaLectureStatus helper를 찾지 못했습니다.");
+  }
+  if (!Parsers) {
+    throw new Error("SomaParsers helper를 찾지 못했습니다.");
   }
 
   function sendMessage(message) {
@@ -27,93 +31,19 @@
   }
 
   function findGroupValue(label) {
-    const group = findGroup(label);
-    return normalizeText(group?.querySelector(".c")?.textContent || "");
+    return Parsers.findGroupValue(document, label);
   }
 
   function parseLectureDateTime(raw) {
-    const normalized = normalizeText(raw);
-    const dateMatch = normalized.match(/(\d{4})\.(\d{2})\.(\d{2})/);
-    const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2})/g)];
-
-    if (!dateMatch || timeMatches.length < 2) {
-      throw new Error("강의 날짜에서 시간 정보를 추출하지 못했습니다.");
-    }
-
-    const [, year, month, day] = dateMatch;
-    const startHour = timeMatches[0][1].padStart(2, "0");
-    const startMinute = timeMatches[0][2];
-    const endHour = timeMatches[1][1].padStart(2, "0");
-    const endMinute = timeMatches[1][2];
-    const date = `${year}-${month}-${day}`;
-
-    return {
-      startAt: LectureStatus.buildSeoulIsoDateTime(date, startHour, startMinute),
-      endAt: LectureStatus.buildSeoulIsoDateTime(date, endHour, endMinute)
-    };
+    return Parsers.parseLectureDateTime(raw);
   }
 
   function extractLectureStatusInfo() {
-    const qustnrSn = document.querySelector('input[name="qustnrSn"]')?.value?.trim() || "";
-    const title = findGroupValue("모집 명");
-    const place = findGroupValue("장소");
-    const lectureDate = findGroupValue("강의날짜");
-    let schedule = null;
-
-    try {
-      schedule = parseLectureDateTime(lectureDate);
-    } catch (_error) {
-      schedule = null;
-    }
-
-    if (!qustnrSn || !title) {
-      return null;
-    }
-
-    return {
-      id: qustnrSn,
-      qustnrSn,
-      title,
-      place,
-      startAt: schedule?.startAt || "",
-      endAt: schedule?.endAt || "",
-      parseFailed: !schedule,
-      detailUrl: location.href,
-      url: location.href
-    };
+    return Parsers.parseDetailStatusInfo(document, { href: location.href });
   }
 
   function extractLectureInfo() {
-    const qustnrSn = document.querySelector('input[name="qustnrSn"]')?.value?.trim() || "";
-    const title = findGroupValue("모집 명");
-    const place = findGroupValue("장소");
-    const lectureDate = findGroupValue("강의날짜");
-    const capacityText = findGroupValue("모집인원");
-    const appliedCount = Array.from(document.querySelectorAll(".boardlist tbody tr"))
-      .filter((row) => row.textContent?.includes("[신청완료]"))
-      .length;
-
-    if (!qustnrSn) throw new Error("특강 식별자(qustnrSn)를 찾지 못했습니다.");
-    if (!title) throw new Error("모집 명을 찾지 못했습니다.");
-    if (!place) throw new Error("장소를 찾지 못했습니다.");
-
-    const { startAt, endAt } = parseLectureDateTime(lectureDate);
-    const applyCnt = Number.parseInt(capacityText.replace(/[^\d]/g, ""), 10);
-
-    if (!Number.isFinite(applyCnt)) {
-      throw new Error("모집인원을 읽지 못했습니다.");
-    }
-
-    return {
-      qustnrSn,
-      applyCnt,
-      appCnt: appliedCount,
-      title,
-      place,
-      startAt,
-      endAt,
-      detailUrl: location.href
-    };
+    return Parsers.parseDetailLectureInfo(document, { href: location.href });
   }
 
   function markDetailElement(element) {

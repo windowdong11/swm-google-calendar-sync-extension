@@ -10,10 +10,14 @@
     statusBannerClass: "soma-status-banner"
   };
   const LectureStatus = globalThis.SomaLectureStatus;
+  const Parsers = globalThis.SomaParsers;
   const NATIVE_LIST_FILTER_LABELS = ["전체", "접수중", "마감", "자유 멘토링", "멘토 특강"];
 
   if (!LectureStatus) {
     throw new Error("SomaLectureStatus helper를 찾지 못했습니다.");
+  }
+  if (!Parsers) {
+    throw new Error("SomaParsers helper를 찾지 못했습니다.");
   }
 
   function sendMessage(message) {
@@ -351,56 +355,7 @@
   }
 
   function parseLecturesFromPage(doc) {
-    const rows = Array.from(doc.querySelectorAll(".boardlist table.t tbody tr"));
-    const lectures = [];
-
-    for (const row of rows) {
-      const titleLink = row.querySelector("td.tit a");
-      if (!titleLink) continue;
-
-      const href = titleLink.getAttribute("href") || "";
-      const idMatch = href.match(/qustnrSn=(\d+)/);
-      const id = idMatch?.[1];
-      if (!id) continue;
-
-      const tds = Array.from(row.querySelectorAll("td.pc_only"));
-      if (tds.length < 8) continue;
-
-      const dateCell = tds[2];
-      const rawText = (dateCell.innerText || "").trim();
-      const normalized = normalizeText(rawText);
-      const dateMatch = normalized.match(/(\d{4}-\d{2}-\d{2})\([^)]+\)/);
-      const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2})/g)];
-
-      if (!dateMatch || timeMatches.length < 2) {
-        lectures.push({
-          id,
-          title: titleLink.textContent?.trim() || "",
-          url: new URL(href, location.origin).toString(),
-          startAt: "",
-          endAt: "",
-          parseFailed: true,
-          statusText: "접수중",
-          rawText
-        });
-        continue;
-      }
-
-      const date = dateMatch[1];
-
-      lectures.push({
-        id,
-        title: titleLink.textContent?.trim() || "",
-        url: new URL(href, location.origin).toString(),
-        startAt: LectureStatus.buildSeoulIsoDateTime(date, timeMatches[0][1], timeMatches[0][2]),
-        endAt: LectureStatus.buildSeoulIsoDateTime(date, timeMatches[1][1], timeMatches[1][2]),
-        parseFailed: false,
-        statusText: "접수중",
-        rawText
-      });
-    }
-
-    return lectures;
+    return Parsers.parseListLectures(doc, { origin: location.origin });
   }
 
   function mapLectureRows(doc) {

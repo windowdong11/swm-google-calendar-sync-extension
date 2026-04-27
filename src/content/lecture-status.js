@@ -1,4 +1,10 @@
 (function () {
+  const Parsers = globalThis.SomaParsers;
+
+  if (!Parsers) {
+    throw new Error("SomaParsers helper를 찾지 못했습니다.");
+  }
+
   function normalizeText(value) {
     return typeof value === "string" ? value.replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim() : "";
   }
@@ -396,60 +402,15 @@
   }
 
   function parseHistoryDateText(rawText) {
-    const normalized = normalizeText(rawText);
-    const dateMatch = normalized.match(/(\d{4})-(\d{2})-(\d{2})/);
-    const timeMatches = [...normalized.matchAll(/(\d{1,2}):(\d{2}):(\d{2})/g)];
-
-    if (!dateMatch || timeMatches.length < 2) {
-      return null;
-    }
-
-    const [, year, month, day] = dateMatch;
-    const date = `${year}-${month}-${day}`;
-    return {
-      startAt: buildSeoulIsoDateTime(date, timeMatches[0][1], timeMatches[0][2], timeMatches[0][3]),
-      endAt: buildSeoulIsoDateTime(date, timeMatches[1][1], timeMatches[1][2], timeMatches[1][3])
-    };
+    return Parsers.parseHistoryDateText(rawText);
   }
 
   function parseHistoryRegistrationRow(row) {
-    const cells = Array.from(row.querySelectorAll("td"));
-    if (cells.length < 9) return null;
-
-    const statusText = normalizeText(cells[6]?.textContent);
-    if (!statusText.includes("접수완료")) {
-      return null;
-    }
-
-    const titleCell = row.querySelector("td.tit");
-    const title = normalizeText(titleCell?.textContent);
-    const link = titleCell?.querySelector("a");
-    const href = link?.getAttribute("href") || "";
-    const qustnrSn = href.match(/qustnrSn=(\d+)/)?.[1] || "";
-    const schedule = parseHistoryDateText(cells[4]?.textContent || "");
-    const cancelHref = row.querySelector('a[href^="javascript:delDate("]')?.getAttribute("href") || "";
-    const cancelMatch = cancelHref.match(/delDate\('([^']+)','([^']+)',\s*'([^']+)'\)/);
-
-    if (!title || !qustnrSn || !schedule) {
-      return null;
-    }
-
-    return {
-      qustnrSn,
-      title,
-      detailUrl: href ? new URL(href, location.origin).toString() : "",
-      startAt: schedule.startAt,
-      endAt: schedule.endAt,
-      applySn: cancelMatch?.[1] || "",
-      gubun: cancelMatch?.[3] || "mentoLec"
-    };
+    return Parsers.parseHistoryRegistrationRow(row, { origin: location.origin });
   }
 
   function parseHistoryRegistrations(doc) {
-    const rows = Array.from(doc.querySelectorAll(".boardlist table tbody tr"));
-    return rows
-      .map((row) => parseHistoryRegistrationRow(row))
-      .filter(Boolean);
+    return Parsers.parseHistoryRegistrations(doc, { origin: location.origin });
   }
 
   function getHistoryLastPage(doc) {
