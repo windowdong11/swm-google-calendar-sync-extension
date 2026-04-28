@@ -53,16 +53,32 @@ function scheduleOffscreenClose() {
 
 async function parseInOffscreen(html) {
   await ensureOffscreen();
-  const response = await chrome.runtime.sendMessage({
-    target: "offscreen",
-    type: "OFFSCREEN_PARSE_HTML",
-    payload: { html }
-  });
   scheduleOffscreenClose();
-  if (!response || response.ok !== true) {
-    throw new Error(response?.error || "Offscreen 파싱 실패");
+  try {
+    const response = await chrome.runtime.sendMessage({
+      target: "offscreen",
+      type: "OFFSCREEN_PARSE_HTML",
+      payload: { html }
+    });
+    scheduleOffscreenClose();
+    if (!response || response.ok !== true) {
+      throw new Error(response?.error || "Offscreen 파싱 실패");
+    }
+    return { lectures: response.lectures || [] };
+  } catch (err) {
+    scheduleOffscreenClose();
+    throw err;
   }
-  return { lectures: response.lectures || [] };
+}
+
+async function rescheduleOffscreenCloseIfPresent() {
+  try {
+    if (await hasOffscreenDocument()) {
+      scheduleOffscreenClose();
+    }
+  } catch (err) {
+    console.warn("SOMA polling: failed to reschedule offscreen close on startup", err);
+  }
 }
 
 async function runPollingCycle() {
@@ -774,7 +790,14 @@ chrome.runtime.onInstalled.addListener(async () => {
       console.warn("SOMA polling: failed to register alarm on install", err);
     }
   }
+  await rescheduleOffscreenCloseIfPresent();
 });
+
+if (chrome.runtime?.onStartup?.addListener) {
+  chrome.runtime.onStartup.addListener(async () => {
+    await rescheduleOffscreenCloseIfPresent();
+  });
+}
 
 if (chrome.alarms?.onAlarm?.addListener) {
   chrome.alarms.onAlarm.addListener(async (alarm) => {
