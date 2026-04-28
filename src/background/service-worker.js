@@ -1,3 +1,7 @@
+if (typeof importScripts === "function") {
+  importScripts("polling.js", "swm-fetch.js");
+}
+
 const DEFAULT_SETTINGS = {
   backToBackMinutes: 15,
   allowDirectDelete: false,
@@ -5,6 +9,72 @@ const DEFAULT_SETTINGS = {
   includeTransparentEvents: false,
   selectedCalendarIds: ["primary"]
 };
+
+const OFFSCREEN_DOCUMENT_PATH = "src/background/offscreen.html";
+const OFFSCREEN_IDLE_MS = 5 * 60 * 1000;
+let offscreenIdleTimer = null;
+
+async function hasOffscreenDocument() {
+  if (!chrome.offscreen?.hasDocument) return false;
+  try {
+    return await chrome.offscreen.hasDocument();
+  } catch {
+    return false;
+  }
+}
+
+async function ensureOffscreen() {
+  if (!chrome.offscreen?.createDocument) {
+    throw new Error("chrome.offscreen API가 사용 불가합니다.");
+  }
+  if (await hasOffscreenDocument()) return;
+  await chrome.offscreen.createDocument({
+    url: OFFSCREEN_DOCUMENT_PATH,
+    reasons: ["DOM_PARSER"],
+    justification: "Parse SWM lecture list HTML using shared DOMParser-based logic"
+  });
+}
+
+function scheduleOffscreenClose() {
+  if (offscreenIdleTimer) {
+    clearTimeout(offscreenIdleTimer);
+  }
+  offscreenIdleTimer = setTimeout(async () => {
+    offscreenIdleTimer = null;
+    try {
+      if (await hasOffscreenDocument()) {
+        await chrome.offscreen.closeDocument();
+      }
+    } catch (err) {
+      console.warn("SOMA polling: failed to close offscreen document", err);
+    }
+  }, OFFSCREEN_IDLE_MS);
+}
+
+async function parseInOffscreen(html) {
+  await ensureOffscreen();
+  const response = await chrome.runtime.sendMessage({
+    target: "offscreen",
+    type: "OFFSCREEN_PARSE_HTML",
+    payload: { html }
+  });
+  scheduleOffscreenClose();
+  if (!response || response.ok !== true) {
+    throw new Error(response?.error || "Offscreen 파싱 실패");
+  }
+  return { lectures: response.lectures || [] };
+}
+
+async function runPollingCycle() {
+  if (!globalThis.SomaPolling || !globalThis.SomaSwmFetch) {
+    throw new Error("Polling 모듈이 로드되지 않았습니다.");
+  }
+  return globalThis.SomaPolling.handleAlarmFire(chrome, {
+    fetchListHtml: globalThis.SomaSwmFetch.fetchListHtml,
+    parseInOffscreen,
+    now: () => new Date()
+  });
+}
 
 const LECTURE_EVENT_MAPPINGS_KEY = "lectureEventMappings";
 
@@ -697,9 +767,31 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!current.userSettings) {
     await chrome.storage.sync.set({ userSettings: DEFAULT_SETTINGS });
   }
+  if (globalThis.SomaPolling?.registerAlarm) {
+    try {
+      await globalThis.SomaPolling.registerAlarm(chrome);
+    } catch (err) {
+      console.warn("SOMA polling: failed to register alarm on install", err);
+    }
+  }
 });
 
+if (chrome.alarms?.onAlarm?.addListener) {
+  chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (!alarm || alarm.name !== globalThis.SomaPolling?.ALARM_KEY) return;
+    try {
+      await runPollingCycle();
+    } catch (err) {
+      console.warn("SOMA polling: cycle failed", err);
+    }
+  });
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.target === "offscreen") {
+    return false;
+  }
+
   (async () => {
     try {
       if (message.type === "GET_SETTINGS") {
@@ -762,6 +854,35 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       if (message.type === "DELETE_CALENDAR_EVENT_BY_LECTURE") {
         const result = await deleteCalendarEventByLecture(message.payload);
         sendResponse({ ok: true, ...result });
+        return;
+      }
+
+      if (message.type === "POLLING_TRIGGER_NOW") {
+        const result = await runPollingCycle();
+        sendResponse(result);
+        return;
+      }
+
+      if (message.type === "POLLING_GET_STATE") {
+        const settings = await globalThis.SomaPolling.readSettings(chrome);
+        const state = await globalThis.SomaPolling.readState(chrome);
+        const snapshotResult = await chrome.storage.local.get("lectureSnapshot");
+        sendResponse({
+          ok: true,
+          settings,
+          state,
+          snapshot: snapshotResult.lectureSnapshot || null
+        });
+        return;
+      }
+
+      if (message.type === "POLLING_UPDATE_SETTINGS") {
+        const next = await globalThis.SomaPolling.updateSettings(chrome, message.payload || {});
+        sendResponse({ ok: true, settings: next });
+        return;
+      }
+
+      if (message.type === "OFFSCREEN_PARSE_HTML") {
         return;
       }
 
