@@ -240,3 +240,108 @@ test("updateSettings clears pausedReason when re-enabling polling", async () => 
   assert.equal(store.local.pollingState.pausedReason, null);
   assert.equal(store.local.pollingState.consecutiveFailures, 0);
 });
+
+test("handleAlarmFire reschedules with 5m backoff after first failure (counter 0 -> 1)", async () => {
+  const { chrome, alarms } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  const deps = {
+    fetchListHtml: async () => ({ ok: false, error: "boom" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  };
+
+  await Polling.handleAlarmFire(chrome, deps);
+
+  const created = alarms.created.find((a) => a.name === Polling.ALARM_KEY);
+  assert.equal(created.info.delayInMinutes, 5);
+});
+
+test("handleAlarmFire reschedules with 60m backoff after fourth failure (counter 3 -> 4)", async () => {
+  const { chrome, alarms } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE, consecutiveFailures: 3 }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: false, error: "boom" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  const created = alarms.created.find((a) => a.name === Polling.ALARM_KEY);
+  assert.equal(created.info.delayInMinutes, 60);
+});
+
+test("handleAlarmFire records lastError on failure with code and message", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: false, error: "HTTP 503" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.equal(store.local.pollingState.lastError.code, "fetch-failed");
+  assert.equal(store.local.pollingState.lastError.message, "HTTP 503");
+  assert.equal(store.local.pollingState.lastError.at, "2026-04-29T08:00:00.000Z");
+});
+
+test("handleAlarmFire treats parse error as a failure increment", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE, consecutiveFailures: 0 }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: true, html: "<html></html>" }),
+    parseInOffscreen: async () => {
+      throw new Error("parser blew up");
+    },
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.equal(store.local.pollingState.consecutiveFailures, 1);
+  assert.equal(store.local.pollingState.lastError.code, "parse-failed");
+  assert.match(store.local.pollingState.lastError.message, /parser blew up/);
+});
+
+test("handleAlarmFire does not reschedule when polling is disabled", async () => {
+  const { chrome, alarms } = makeChromeMock({
+    pollingSettings: { enabled: false, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: false, error: "boom" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.equal(alarms.created.length, 0);
+});
+
+test("handleAlarmFire stores rangeDays-aware snapshot metadata on success", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 14 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  let capturedRangeDays;
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async ({ rangeDays }) => {
+      capturedRangeDays = rangeDays;
+      return { ok: true, html: "<html></html>" };
+    },
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.equal(capturedRangeDays, 14);
+  assert.equal(store.local.lectureSnapshot.takenAt, "2026-04-29T08:00:00.000Z");
+});
