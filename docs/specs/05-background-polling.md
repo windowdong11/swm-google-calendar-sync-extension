@@ -2,14 +2,16 @@
 
 > Status: draft
 > Branch: feature/05-background-polling
-> Phase: 2
+> Phase: 2 (단, **spec 01 calendar-view의 선행 의존성**으로 작업 순서상 가장 먼저 진입)
 > Depends on: 없음 (단, 06 스냅샷 spec과 한 짝으로 동작)
+
+> ⚠️ **작업 순서 메모**: 원래 Phase 2 인프라이지만 spec 01(캘린더 뷰)이 본 spec의 `lectureSnapshot`을 데이터 소스로 삼게 되어, **본 spec이 가장 먼저 머지되어야** 후속 spec 01을 코딩할 수 있다. 본 spec PR 머지 → spec 01 진입 순서 유지.
 
 ## 1. 목적
 
-자리 알림·신규 특강 알림은 사용자가 SWM 페이지를 열고 있지 않을 때도 동작해야 한다. **`chrome.alarms` 기반 service worker 주기 폴링**으로 특강 목록을 백그라운드에서 가져와 캐시하고, 변경분(spec 06)을 기반으로 알림(spec 07)을 띄운다.
+자리 알림·신규 특강 알림은 사용자가 SWM 페이지를 열고 있지 않을 때도 동작해야 한다. **`chrome.alarms` 기반 service worker 주기 폴링**으로 특강 목록을 백그라운드에서 가져와 캐시하고, 변경분(spec 06)을 기반으로 알림(spec 07)을 띄운다. 또한 spec 01의 캘린더 페이지가 본 폴링 결과(`lectureSnapshot`)를 그대로 읽어 그린다.
 
-본 spec은 **수집 부분만** 다룬다. 변경 감지는 spec 06, 알림은 spec 07.
+본 spec은 **수집 부분만** 다룬다. 변경 감지는 spec 06, 알림은 spec 07, 캘린더 렌더는 spec 01.
 
 ## 2. 사용자 스토리
 
@@ -152,4 +154,4 @@ type LectureSnapshot = {
 
 - 코드: `src/content/parsers.js` 목록 파서, `src/background/service-worker.js`
 - 외부: [chrome.alarms](https://developer.chrome.com/docs/extensions/reference/api/alarms)
-- 관련 spec: 06 스냅샷·diff (소비자), 07 chrome notification, 08 알림 큐
+- 관련 spec: **01 캘린더 뷰 (소비자, 본 spec의 직접 후속)**, 06 스냅샷·diff (소비자), 07 chrome notification, 08 알림 큐

@@ -119,31 +119,32 @@
 기능을 3단계로 나눈다. 단계 안에서는 ID 순서가 작업 순서.
 
 ### Phase 1 — Visualization (보기 편하게)
-| ID | 제목 | 파일 | Status |
-|---|---|---|---|
-| 01 | 캘린더 뷰 | [`01-calendar-view.md`](01-calendar-view.md) | draft |
-| 02 | 카테고리 분류 | [`02-category-classification.md`](02-category-classification.md) | draft |
-| 03 | 멘토별 분류 | [`03-mentor-classification.md`](03-mentor-classification.md) | draft |
-| 04 | 목록 필터링 | [`04-list-filtering.md`](04-list-filtering.md) | draft |
+| ID | 제목 | 파일 | Status | 의존 |
+|---|---|---|---|---|
+| 01 | 캘린더 뷰 | [`01-calendar-view.md`](01-calendar-view.md) | draft | **05 선행 필수** |
+| 02 | 카테고리 분류 | [`02-category-classification.md`](02-category-classification.md) | draft | B-1 |
+| 03 | 멘토별 분류 | [`03-mentor-classification.md`](03-mentor-classification.md) | draft | B-1 |
+| 04 | 목록 필터링 | [`04-list-filtering.md`](04-list-filtering.md) | draft | 02·03 |
 
 ### Phase 2 — Infrastructure (수집·알림 인프라)
-| ID | 제목 | 파일 | Status |
-|---|---|---|---|
-| 05 | 백그라운드 주기 폴링 | [`05-background-polling.md`](05-background-polling.md) | draft |
-| 06 | 특강 스냅샷·diff | [`06-lecture-snapshot-diff.md`](06-lecture-snapshot-diff.md) | draft |
-| 07 | Chrome notification 통합 | [`07-chrome-notifications.md`](07-chrome-notifications.md) | draft |
-| 08 | 알림 큐 | [`08-notification-queue.md`](08-notification-queue.md) | draft |
+| ID | 제목 | 파일 | Status | 의존 |
+|---|---|---|---|---|
+| 05 | 백그라운드 주기 폴링 | [`05-background-polling.md`](05-background-polling.md) | draft | B-3 |
+| 06 | 특강 스냅샷·diff | [`06-lecture-snapshot-diff.md`](06-lecture-snapshot-diff.md) | draft | 05 |
+| 07 | Chrome notification 통합 | [`07-chrome-notifications.md`](07-chrome-notifications.md) | draft | 06 |
+| 08 | 알림 큐 | [`08-notification-queue.md`](08-notification-queue.md) | draft | 07 |
 
 ### Phase 3 — User-facing alerts (사용자 알림 기능)
-| ID | 제목 | 파일 | Status |
-|---|---|---|---|
-| 09 | 관심 멘토 등록·신규 특강 알림 | [`09-mentor-watchlist.md`](09-mentor-watchlist.md) | draft |
-| 10 | 관심 특강 등록·자리 알림 | [`10-lecture-watchlist.md`](10-lecture-watchlist.md) | draft |
+| ID | 제목 | 파일 | Status | 의존 |
+|---|---|---|---|---|
+| 09 | 관심 멘토 등록·신규 특강 알림 | [`09-mentor-watchlist.md`](09-mentor-watchlist.md) | draft | 03·07·08 |
+| 10 | 관심 특강 등록·자리 알림 | [`10-lecture-watchlist.md`](10-lecture-watchlist.md) | draft | 06·07·08·B-2 |
 
-phase 의존 관계: Phase 2는 Phase 1 위에서 동작 가능하지만 코드상 의존은 없다. Phase 3은 Phase 2(05·06·07·08) 모두에 의존한다.
+phase 의존 관계: 본래 Phase 1과 Phase 2는 코드상 독립이었으나, **2026-04-28 결정으로 spec 01이 spec 05의 `lectureSnapshot`을 데이터 소스로 사용**하게 되어 phase 1 안의 spec 01만 phase 2의 spec 05에 선행 의존한다. Phase 3은 Phase 2(05·06·07·08) 모두에 의존한다. 작업 진입 순서·차단 항목은 [`NEXT-SESSION.md`](NEXT-SESSION.md) §5·§6 참조.
 
 ---
 
 ## 4. 변경 이력
 
 - 2026-04-28: 초기 스펙 디렉토리 생성. Phase 인덱스만 등록, 개별 spec 본문은 별도 PR로 추가 예정.
+- 2026-04-28: spec 01 결정 반영(새 탭 진입·08:00~24:00·spec 05 데이터 소스 D-3) → Phase 1의 spec 01이 Phase 2의 spec 05에 선행 의존하게 됨. 표에 의존 컬럼 추가.

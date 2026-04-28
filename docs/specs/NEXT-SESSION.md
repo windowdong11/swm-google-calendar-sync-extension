@@ -37,11 +37,10 @@ df5b28f test: cover orphan cancel deletion and active/cancel coexistence in sync
 
 각 항목은 **결정 후 해당 spec 본문 갱신** 필요. 결정 없이 코딩 진입 가능한 spec은 따로 표시.
 
-### Spec 01 — 캘린더 뷰
-- [ ] **U-01-1** 기본 뷰 모드: `table` vs `month`
-  - 추천: `table` (기존 사용자 영향 최소)
-- [ ] **U-01-2** 주간 뷰 시간축 범위: `09:00~22:00` vs `00:00~24:00`
-  - 추천: 일단 `09:00~22:00` (특강 분포 관찰 후 자동 적응)
+### Spec 01 — 캘린더 뷰 *(2026-04-28 결정 반영 완료, spec 본문 갱신됨)*
+- [x] U-01-1 진입점: **확장 아이콘 클릭 → 새 탭 전용 페이지(`calendar.html`)**. 목록 페이지 토글 방식 폐기.
+- [x] U-01-2 주간 뷰 시간축 범위: **08:00~24:00 고정**.
+- [x] D-1 캘린더 데이터 소스: **spec 05의 `lectureSnapshot`** (D-3 결정). → spec 01은 spec 05 선행 의존.
 
 ### Spec 02 — 카테고리 분류
 - [ ] **U-02-1** 실제 SWM 목록 페이지에서 카테고리 정보의 DOM 위치 확인 (▶ 차단 항목 B-1 참조)
@@ -145,57 +144,59 @@ df5b28f test: cover orphan cancel deletion and active/cancel coexistence in sync
 
 ## 5. 작업 가능 단위 (의존 그래프)
 
+> 2026-04-28 갱신: spec 01이 spec 05의 `lectureSnapshot`을 소비하기로 결정되어 **05 → 01 순서**로 변경됨. 캘린더는 더 이상 단독 진입 가능한 spec이 아니다.
+
 ```
-            ┌── 01 (calendar-view) ───┐
-            │                         │
-B-1 ─── 02 (category) ──┐             │
+   05 (polling) ────┬── 01 (calendar-view)        ← 작업 우선순위 1, 2
+   (B-3 검증 의존)  │
+                    ├── 06 (diff) ── 07 (notif) ── 08 (queue)
+                    │                              │
+                    │                              ├── 09 (mentor-watch)
+                    │                              └── 10 (lecture-watch)
+                    │                                    (B-2 의존)
+B-1 ─── 02 (category) ──┐
    └─── 03 (mentor) ────┼── 04 (filter)
-                        │
-                        ├── (parser 확장 공유)
-                        │
-       05 (polling) ────┼── 06 (diff) ── 07 (notif) ── 08 (queue)
-       (B-2, B-3 의존)  │                              │
-                        │                              │
-                        └─────────────────── 09 (mentor-watch)
-                                          ┌── 10 (lecture-watch)
-                                          │
-                                       06+07+08+B-2 의존
+                        └── (parser 확장 공유)
 ```
 
-### 5.1 즉시 시작 가능
-- **`feature/01-calendar-view`** — 추가 데이터 의존 없음. U-01-1, U-01-2만 결정하면 진입.
-- **`feature/05-background-polling` (skeleton만)** — alarm 등록·옵션 UI·`fetch` 호출까지는 B-3 검증 없이도 작성 가능. 단, 실제 인증 검증 전엔 PR 머지 보류.
+### 5.1 즉시 시작 가능 (작업 우선순위 1)
+- **`feature/05-background-polling`** — alarm 등록·`fetch`·파서 호출·storage 저장까지의 **핵심 경로**. 옵션 UI는 후속. B-3(인증) 검증을 코딩 첫 단계로 처리.
 
-### 5.2 B-1 해결 후 시작 가능
+### 5.2 spec 05 머지 후 (작업 우선순위 2)
+- **`feature/01-calendar-view`** — `lectureSnapshot`을 storage에서 읽어 새 탭 페이지에 렌더. 추가 fetch 없음. spec 05의 `POLLING_TRIGGER_NOW` 메시지 재사용.
+
+### 5.3 B-1 해결 후 시작 가능
 - `feature/02-category-classification`
 - `feature/03-mentor-classification`
 - 두 개의 parser 확장이 같은 파일을 만지므로 **순차** 처리 추천 (02 → 03 → rebase).
 
-### 5.3 02·03 머지 후 시작 가능
+### 5.4 02·03 머지 후 시작 가능
 - `feature/04-list-filtering` (메타데이터 의존)
 - `feature/09-mentor-watchlist` (mentorKey 의존)
 
-### 5.4 05·06·07·08 일괄 작업 단계
-- spec 5~8은 한 흐름이라 **하나의 작업 세션에서 같이** 진행하는 게 자연스러움. 각 브랜치는 분리하되 PR을 순서대로 머지(05 → 06 → 07 → 08).
+### 5.5 06·07·08 일괄 작업 단계
+- spec 6~8은 한 흐름이라 **하나의 작업 세션에서 같이** 진행하는 게 자연스러움. 각 브랜치는 분리하되 PR을 순서대로 머지(06 → 07 → 08).
 
-### 5.5 마지막 단계
+### 5.6 마지막 단계
 - `feature/10-lecture-watchlist` — 모든 인프라(05~08) + B-2(자리 정보) 검증 완료 후
 
 ---
 
 ## 6. 권장 다음 세션 시작 시퀀스
 
-가장 마찰이 적은 진입은 **spec 01부터**. 그 사이에 사용자가 B-1(페이지 캡처)을 진행하면, 이어서 02·03을 빠르게 처리할 수 있다.
+진입 순서: **spec 05 → spec 01**. 캘린더가 spec 05의 결과 위에서 동작하므로 폴링이 한 번 성공한 후에 캘린더 작업이 의미를 갖는다.
 
-1. 사용자에게 U-01-1, U-01-2 결정 요청
-2. spec 01 본문 갱신 (결정 반영, `Status: in-progress`)
-3. `feature/01-calendar-view` 브랜치 생성
-4. `code-delegate` 스킬로 coder + code-reviewer 위임 (또는 직접 작성)
-5. mock/list.html에 캘린더 검증 시나리오 추가 → 수동 확인
-6. PR/머지 → spec 01 `Status: shipped`로 갱신
-7. B-1 입력이 들어와 있으면 spec 02·03으로 진입
+1. `feature/05-background-polling` 브랜치 생성
+2. 코딩 첫 단계로 **B-3 검증** — service worker에서 SWM 목록 URL fetch 후 응답이 로그인 페이지인지 판정. 실패 시 spec 05의 인증 처리 항목 재검토.
+3. spec 05 핵심 경로 구현 (alarm 10분 주기, fetch, parser 재사용, `lectureSnapshot` 저장). 옵션 UI는 최소 토글만.
+4. `code-delegate` 스킬로 coder + code-reviewer 위임 (또는 직접 작성). 기존 git log 스타일 conventional commits.
+5. PR/머지 → spec 05 `Status: shipped`로 갱신
+6. `feature/01-calendar-view` 브랜치 생성
+7. `calendar.html` + `chrome.action.onClicked` 핸들러 + 그리드 렌더 구현. mock fixture 추가.
+8. PR/머지 → spec 01 `Status: shipped`로 갱신
+9. B-1 입력이 들어와 있으면 spec 02·03으로 진입
 
-병행 가능한 사용자 작업: B-1 페이지 캡처, U-02·03·04 결정.
+병행 가능한 사용자 작업: B-1 페이지 캡처, U-02·03·04 결정, U-05·06·07·08·09·10 결정.
 
 ---
 
@@ -211,3 +212,4 @@ B-1 ─── 02 (category) ──┐             │
 ## 8. 변경 이력
 
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
+- 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 이로 인해 작업 순서가 **05 → 01**로 변경됨. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
