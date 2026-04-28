@@ -42,22 +42,14 @@ df5b28f test: cover orphan cancel deletion and active/cancel coexistence in sync
 
 결정 완료 항목은 spec 본문에 반영되어 있고, 본 문서에서는 제거됨. 아래 목록이 남은 전부.
 
-### 묶음 A — Round 0 즉답 (6개, 1분 컷, 전부 ✅ 비차단)
+### 묶음 A — 결정 완료 (2026-04-29)
 
-NEXT-SESSION 추천안 OK 여부만 답. 한 번에 처리해 spec 진입 마찰 제거.
+[결정 완료 항목 §2 끝부분 참조] 6개 + spec 07 폐기까지 일괄 결정.
 
-- [ ] **U-04-1** 자리 여유 임계값(`almostFull`) 옵션화 여부 — 추천: 하드코드 10% 시작, 사용 후 옵션화 검토
-- [ ] **U-06-1** `meta-changed` 알림 기본값 — 추천: OFF (자주 발생, 가치 낮음)
-- [ ] **U-07-2** 자리 알림 본문에 잔여석 수 표시 — 추천: 표시 (의사결정에 직접 도움)
-- [ ] **U-08-2** 알림 큐 보존 기간 기본값 — 추천: 7일 (자리 비울 가능성 큰 케이스 대비)
-- [ ] **U-09-2** 멘토 단위 알림 카테고리 세분화 옵션 — 추천: 1차 출시 X, 사용 후 추가
-- [ ] **U-10-1** `seat-closed` 알림 기본값 — 추천: OFF (소음 우려, 패턴 분석 원하면 큐에서 확인)
+### 묶음 B — Round 1 알림 정책 (3개, 🛑 차단, 정합성 위해 한 번에)
 
-### 묶음 B — Round 1 알림 정책 (4개, 🛑 차단, 정합성 위해 한 번에)
+spec 08/09/10에 걸쳐 일관된 정책 필요. 따로 따로 결정하면 spec마다 멈춤.
 
-spec 07/08/09/10에 걸쳐 일관된 정책 필요. 따로 따로 결정하면 spec마다 멈춤.
-
-- [ ] **U-07-1** `time/place/meta-changed` 본인 신청만 vs 전체 — 추천: 본인 신청만 (전체는 노이즈)
 - [ ] **U-08-1** 큐 항목 액션 버튼 — 추천: 1차 `상세로 이동`·`읽음` 두 개. 후보 (Calendar 추가, 관심 해제, 카테고리 끄기)는 사용 후 추가
 - [ ] **U-09-1** 별표 토글 위치 — 추천: 멘토 칩 옆 + 멘토 그룹 헤더(spec 03) 둘 다
 - [ ] **U-10-2** 충돌 상태 특강 등록 시 차단 vs 경고 — 추천: 경고만 (사용자 자율)
@@ -87,6 +79,15 @@ spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵
 ### 결정 완료 항목 (참고)
 
 - [x] **Spec 01 — 캘린더 뷰** — U-01-1 새 탭 전용 페이지 진입, U-01-2 시간축 08:00~24:00, D-1 데이터 소스 = spec 05 `lectureSnapshot` (D-3 결정)
+- [x] **2026-04-29 묶음 A + spec 07 폐기**
+  - **spec 07 폐기**: 시간/장소/메타 변경 알림 기능 자체 제외. chrome.notifications 발송 책임은 spec 08이 흡수
+  - **U-04-1**: `almostFull` = 잔여 정확히 1자리. 옵션화 X (사용 후 재검토)
+  - **U-06-1**: spec 07 폐기로 자동 무효화 (meta-changed 이벤트도 제거)
+  - **U-07-1**: spec 07 폐기로 자동 무효화
+  - **U-07-2**: 자리 알림 본문에 잔여석 수 표시
+  - **U-08-2**: 알림 큐 보존 기간 = 3일
+  - **U-09-2 → 의미 전환**: 1차 출시는 멘토 카테고리 세분화 X. 단 spec 09의 알림 정책이 "별표 멘토만 발송"에서 "전역 신규 특강 알림 + 별표 멘토 필터링 UI"로 전환. 동일 제목 특강은 한 알림에 시간만 다중 표기로 그룹화
+  - **U-10-1**: `seat-closed` 알림 발송 안 함
 
 ---
 
@@ -102,9 +103,9 @@ spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵
 | T-04 | spec 04 | `cancelled` 신청 상태 판정 방법 (접수내역 의존) | 필터 엔진 작성 시 |
 | T-05 | spec 05 | content script vs 폴링 결과 충돌 시 우선순위 | 폴링 + content 동시 동작 단계 |
 | T-06 | spec 06 | 시리즈 사라짐·재등장 보정 (현재는 removed/added 페어로 노출) | diff 함수 작성 시 |
-| T-07 | spec 07 | Windows 포커스 어시스트·DND 안내 문구 | 옵션 페이지 작성 시 |
-| T-08 | spec 08 | 같은 lecture 다른 카테고리 알림 묶음 표시 | 팝업 UI 작성 시 |
-| T-09 | spec 10 | 자동 제거 시 큐 항목도 같이 정리할지 | watch 모듈 작성 시 |
+| T-08 | spec 08 | Windows 포커스 어시스트·DND 안내 문구 / 자리 알림과 신규 특강 알림 시각적 묶음 | 팝업·옵션 UI 작성 시 |
+| T-09 | spec 09 | 제목 정규화 알고리즘 (공백·괄호·회차번호 제거 정도) | 그룹화 함수 작성 시 |
+| T-10 | spec 10 | 자동 제거 시 큐 항목도 같이 정리할지 | watch 모듈 작성 시 |
 
 ---
 
@@ -137,7 +138,7 @@ spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵
 
 ### B-4 (선택) Chrome OS 알림 권한 동작 확인
 
-- spec 07 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
+- spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
 
 ---
 
@@ -152,38 +153,39 @@ spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵
 ```
 05 (polling) ────┬── 01 (calendar-view)        ← Round 0, 1
 (B-3 검증 의존)   │
-                 ├── 06 (diff) ── 07 (notif) ── 08 (queue)
-                 │                              │
-                 │                              ├── 09 (mentor-watch)
-                 │                              └── 10 (lecture-watch, B-2 의존)
+                 ├── 06 (diff) ── 08 (queue+notify)
+                 │                  │
+                 │                  ├── 09 (new-lecture-notifier)
+                 │                  └── 10 (lecture-watch, B-2 의존)
 
 B-1 ─── 02 (category) ──┐
    └─── 03 (mentor) ────┼── 04 (filter)
                         └── (parser 확장 공유)
+
+[폐기] 07 (Chrome notification) — 책임은 08에 흡수
 ```
 
 **spec ↔ spec 의존 핵심**:
 - 01 ← 05 (lectureSnapshot 소비)
-- 06 → 07 → 08 (한 흐름)
-- 09 ← 03 + 07 + 08
-- 10 ← 06 + 07 + 08 + B-2
+- 06 → 08 (한 흐름)
+- 09 ← 03 + 06 + 08
+- 10 ← 06 + 08 + B-2
 
-### 5.2 Round 0 — 시작 직전 (병렬 3개)
+### 5.2 Round 0 — 시작 직전 (병렬 2개)
 
 | 트랙 | 작업 | 산출물 |
 |---|---|---|
-| 사용자 | **묶음 A** 결정 6개 일괄 답변 | spec 본문 갱신 commit 1개 |
 | 사용자 | **B-1 페이지 캡처** (목록·상세 HTML 비식별화 → `mock/`) | mock fixture 추가 |
 | Claude | `feature/05-background-polling` 브랜치 → **B-3 인증 검증** → spec 05 핵심 경로 | spec 05 shipped |
 
-> 사용자 결정 6개는 1분 컷. B-1 캡처는 시간 들지만 Claude의 spec 05 작업과 완전 병렬.
+> 묶음 A·spec 07 폐기는 2026-04-29 결정 완료. B-1 캡처는 시간 들지만 Claude의 spec 05 작업과 완전 병렬.
 
 ### 5.3 Round 1 — spec 05 머지 후 (병렬 2개)
 
 | 트랙 | 작업 | 의존 |
 |---|---|---|
 | Claude | `feature/01-calendar-view` → `calendar.html` 렌더 → 머지 | spec 05 ✅ |
-| 사용자 | **묶음 B** 알림 정책 4개 + **묶음 C** spec 진입 2개 결정 | — |
+| 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | — |
 | 사용자 | **B-2 확인** (목록 페이지 정원/applyCnt 노출 여부) | spec 06·10 영향 |
 
 > spec 01은 사용자 결정 의존성이 없어 Claude가 단독 진행. 사용자는 이 시간에 알림 정책·범위 결정·B-2 확인을 모아 처리.
@@ -192,37 +194,37 @@ B-1 ─── 02 (category) ──┐
 
 ```
 Track A (service-worker 흐름):     Track B (parsers.js 흐름):
-06 (diff) → 07 (notif) → 08        02 (category) → 03 (mentor) → 04 (filter)
+06 (diff) → 08 (queue+notify)      02 (category) → 03 (mentor) → 04 (filter)
 ```
 
 | 트랙 | spec | 코드 영역 | 사용자 결정 |
 |---|---|---|---|
-| A | 06 → 07 → 08 | `service-worker.js`, `popup.js` | Round 1에서 처리됨 |
+| A | 06 → 08 | `service-worker.js`, `popup.js` | Round 1에서 처리됨 |
 | B | 02 → 03 → 04 | `parsers.js`, 옵션 페이지 | Round 1에서 처리됨 |
 
 **진행 옵션**:
-- **(권장) Track A 먼저, B 나중** — 06·07·08은 한 흐름이라 한 세션에 묶어 작업. 머지 후 02·03·04 진입.
+- **(권장) Track A 먼저, B 나중** — 06·08은 한 흐름이라 한 세션에 묶어 작업. 머지 후 02·03·04 진입.
 - **(고급) worktree 진짜 병렬** — `isolation: "worktree"`로 두 Agent 동시 위임. parsers.js의 02·03 충돌 가능 → Track B 안에서는 02 → 03 순차.
 
 ### 5.5 Round 3 — 마무리 (Phase 3)
 
 | spec | 의존 | 비고 |
 |---|---|---|
-| **09** (멘토 watch) | 03 + 07 + 08 머지 | Track A·B 둘 다 끝나야 |
-| **10** (특강 watch) | 06 + 07 + 08 + **B-2 결과** | B-2가 "상세 폴링 필요"로 나오면 spec 05·06 보강 후 진입 |
+| **09** (신규 특강 알림) | 03 + 06 + 08 머지 | Track A·B 둘 다 끝나야 |
+| **10** (특강 watch) | 06 + 08 + **B-2 결과** | B-2가 "상세 폴링 필요"로 나오면 spec 05·06 보강 후 진입 |
 
-09·10은 코드 영역 다름(09=parsers/popup, 10=service-worker watch 모듈) → **동시 진행** 가능.
+09·10은 코드 영역 다름(09=parsers/popup/그룹화 매처, 10=service-worker watch 모듈) → **동시 진행** 가능.
 
 ### 5.6 타임라인
 
 ```
 Round 0 ┃ [Claude: spec 05]                            ┃
-        ┃ [User: 묶음A + B-1 캡처]                     ┃
+        ┃ [User: B-1 캡처]                             ┃
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Round 1 ┃ [Claude: spec 01]                            ┃
-        ┃ [User: 묶음B + 묶음C + B-2]                  ┃
+        ┃ [User: 묶음B(3) + 묶음C(2) + B-2]            ┃
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Round 2 ┃ [Claude: 06→07→08]   →  [Claude: 02→03→04]   ┃
+Round 2 ┃ [Claude: 06→08]      →  [Claude: 02→03→04]   ┃
         ┃ (또는 worktree로 진짜 병렬)                  ┃
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
@@ -232,7 +234,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
 ### 5.7 병렬 효율 핵심 룰
 
 1. **Round 0에서 B-1을 시작**해야 Round 2 Track B가 막히지 않음. B-1이 가장 큰 레버.
-2. **결정은 묶어서**: 묶음 B(U-07-1·U-08-1·U-09-1·U-10-2)를 따로 결정하면 spec 07/08/09/10 진입할 때마다 멈춤.
+2. **결정은 묶어서**: 묶음 B(U-08-1·U-09-1·U-10-2)를 따로 결정하면 spec 08/09/10 진입할 때마다 멈춤.
 3. **Track A와 B의 분리**: spec 05 머지 후 두 트랙이 독립이라 세션 단위 분리 가능.
 4. **Round 2 worktree 병렬화는 옵션** — 단일 Claude 세션이라면 Track A 먼저 권장.
 
@@ -246,21 +248,20 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
 
 ## 6. 권장 다음 세션 시작 시퀀스
 
-진입 순서: **Round 0**부터.
+진입 순서: **Round 0**부터. 묶음 A·spec 07 폐기는 결정 완료.
 
-1. 사용자가 세션 시작 시 **묶음 A 결정 6개 OK 일괄 답변** (또는 개별 조정).
-2. Claude는 한 메시지로:
+1. Claude는 한 메시지로:
    - `feature/05-background-polling` 브랜치 생성
    - **첫 단계 = B-3 검증** (service worker fetch 한 줄, 응답이 로그인 페이지인지 판정)
    - 검증 결과 200자 이내 보고
-3. B-3 통과 시 spec 05 핵심 경로 구현 (alarm 10분 주기, fetch, parser 재사용, `lectureSnapshot` 저장). 옵션 UI는 최소 토글만.
-4. `code-delegate` 스킬로 coder + code-reviewer 위임 (§7 작업 모드 참조).
-5. PR/머지 → spec 05 `Status: shipped`로 갱신
-6. Round 1 진입 → `feature/01-calendar-view` 브랜치 → `calendar.html` + `chrome.action.onClicked` 핸들러 + 그리드 렌더 구현 + mock fixture 추가.
-7. PR/머지 → spec 01 `Status: shipped`로 갱신
-8. B-1 입력이 들어와 있으면 Round 2 Track B 진입 가능
+2. B-3 통과 시 spec 05 핵심 경로 구현 (alarm 10분 주기, fetch, parser 재사용, `lectureSnapshot` 저장). 옵션 UI는 최소 토글만.
+3. `code-delegate` 스킬로 coder + code-reviewer 위임 (§7 작업 모드 참조).
+4. PR/머지 → spec 05 `Status: shipped`로 갱신
+5. Round 1 진입 → `feature/01-calendar-view` 브랜치 → `calendar.html` + `chrome.action.onClicked` 핸들러 + 그리드 렌더 구현 + mock fixture 추가.
+6. PR/머지 → spec 01 `Status: shipped`로 갱신
+7. B-1 입력이 들어와 있으면 Round 2 Track B 진입 가능
 
-병행 가능한 사용자 작업: B-1 페이지 캡처, 묶음 B·C 결정, B-2 확인.
+병행 가능한 사용자 작업: B-1 페이지 캡처, 묶음 B(3개)·묶음 C(2개) 결정, B-2 확인.
 
 ---
 
@@ -311,3 +312,4 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
 - 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 작업 순서 05 → 01로 변경. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
 - 2026-04-29: §2를 묶음 A~E 구조로 재편(차단성 🛑/⏸️/✅ 분류 추가), §5를 라운드 단위로 재배치(Round 0~3 + 의존성 그래프 + 타임라인 + 병렬 효율 룰 + 함정 포인트), §6 권장 시퀀스를 Round 0 진입 형태로 갱신, **§7 작업 모드 신설**(code-delegate + worktree 병렬, 토큰 절약 룰, 안티패턴), §8/§9 번호 시프트.
+- 2026-04-29: 묶음 A 결정 완료 + **spec 07 폐기**. spec 04(almostFull=잔여 1자리), spec 06(time/place/meta 이벤트 제거), spec 07(deprecated 본문 보존), spec 08(chrome.notifications 발송 책임 흡수, 보존 3일, 카테고리 2종), spec 09(전역 알림 + 별표 멘토 필터 + 동일 제목 그룹화로 의미 전환), spec 10(seat-closed 알림 제외) 본문 동기화. 묶음 B에서 U-07-1 제거(3개 남음), §3 @tbd 표·§5 의존성 그래프·라운드 타임라인 갱신. §6 권장 시퀀스에서 묶음 A 답변 단계 제거.

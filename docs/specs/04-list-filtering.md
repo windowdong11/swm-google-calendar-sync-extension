@@ -82,7 +82,7 @@ type Settings = {
 };
 ```
 
-`capacity` 판정 임계값(예: 잔여 ≤ 10% → `almostFull`)은 옵션화 가능하지만 본 spec에선 하드코드: `잔여 0 → closed`, `잔여 ≤ 정원의 10% → almostFull`, `그 외 → open`.
+`capacity` 판정 임계값은 본 spec에서 옵션화하지 않고 하드코드: `잔여 0 → closed`, `잔여 1 → almostFull`(정확히 한 자리만 남은 경우), `그 외 → open`. 옵션화는 실사용 후 재검토(2026-04-29 결정 U-04-1).
 
 ## 7. 의존성
 
@@ -122,7 +122,6 @@ type Settings = {
 
 ## 12. 미해결 질문
 
-- `@user` 자리 여유 임계값(`almostFull`)을 옵션화할지.
 - `@user` 텍스트 검색 축을 본 spec에 포함할지 별도 spec으로 분리할지.
 - `@tbd` 신청 상태 `cancelled`를 어떻게 안정적으로 판정할지(접수내역 페이지를 거쳐야만 알 수 있음).
 

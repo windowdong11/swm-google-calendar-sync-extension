@@ -4,6 +4,8 @@
 > Branch: feature/06-lecture-snapshot-diff
 > Phase: 2
 > Depends on: 05 (스냅샷 원천), 02·03 (메타데이터)
+>
+> **2026-04-29 갱신**: spec 07 폐기에 따라 `time-changed`·`place-changed`·`meta-changed` 이벤트 타입 제거. `lecture-added` / `lecture-removed` / `seat-opened` / `seat-closed` 4종만 발행.
 
 ## 1. 목적
 
@@ -22,9 +24,6 @@
   - `lecture-removed`: 사라짐(취소·만료)
   - `seat-opened`: 자리가 추가로 생김(`applyCnt` 감소 또는 정원 증가)
   - `seat-closed`: 자리가 줄어듦(`applyCnt` 증가, 만석 도달)
-  - `time-changed`: `startAt`/`endAt` 변경
-  - `place-changed`: `place` 변경
-  - `meta-changed`: 카테고리·멘토 변경
 - 이벤트 객체 표준 스키마
 - 이벤트 시간순 정렬·중복 제거
 - 첫 폴링(prev 없음) 또는 구조 변경 의심(폴링 결과 0건) 시 이벤트 발행 보류
@@ -46,8 +45,8 @@
 - `prev`가 없거나 빈 배열: 이벤트 배열은 비어있음(첫 실행).
 - next가 비어있고 prev는 있음: `structure-suspect` 플래그를 별도 필드로 반환 (spec 05가 알림 보류 결정).
 - 같은 특강이 정원 증감을 함께 일으킨 경우(예: 정원 5→7, 신청 3→6): 자리 수 변화 종합 판정 → 자리 가용성 변동만 단일 이벤트(`seat-opened` 또는 `seat-closed`).
-- 시간 변경과 자리 변경이 동시에 일어남: 두 이벤트 모두 발행. consumer가 묶거나 우선순위 결정.
 - `qustnrSn`이 같은데 다른 특강 정보(SWM 운영 변경)가 들어옴: `lecture-replaced` 단일 이벤트로 처리할지 두 이벤트(`removed` + `added`)로 분리할지 — 우선 후자.
+- 시간·장소·카테고리·멘토 변경은 본 모듈에서 이벤트로 발행하지 않음(spec 07 폐기). 후속 알림 모듈도 해당 이벤트를 사용하지 않음.
 
 ## 5. UI 변경
 
@@ -60,10 +59,7 @@ type LectureChangeEvent =
   | { type: "lecture-added"; lecture: Lecture; at: string }
   | { type: "lecture-removed"; lecture: Lecture; at: string }
   | { type: "seat-opened"; qustnrSn: string; before: SeatInfo; after: SeatInfo; at: string }
-  | { type: "seat-closed"; qustnrSn: string; before: SeatInfo; after: SeatInfo; at: string }
-  | { type: "time-changed"; qustnrSn: string; beforeStart: string; afterStart: string; beforeEnd: string; afterEnd: string; at: string }
-  | { type: "place-changed"; qustnrSn: string; before: string; after: string; at: string }
-  | { type: "meta-changed"; qustnrSn: string; before: { mentorKey?: string; categories?: string[] }; after: { mentorKey?: string; categories?: string[] }; at: string };
+  | { type: "seat-closed"; qustnrSn: string; before: SeatInfo; after: SeatInfo; at: string };
 
 type SeatInfo = {
   applyCnt: number;
@@ -109,7 +105,6 @@ type DiffResult = {
   - 추가·삭제 단순 케이스
   - 자리 가용성 변경 (`available` 0→1, 1→0)
   - 정원·신청수 둘 다 변경되는 합산 케이스
-  - 시간·장소·메타 변경
   - prev 없을 때 이벤트 0건
   - `structureSuspect` 플래그 트리거
   - 같은 qustnrSn 동시 다중 변화 → 다중 이벤트
@@ -122,7 +117,6 @@ type DiffResult = {
 
 ## 12. 미해결 질문
 
-- `@user` `meta-changed`는 알림 가치가 낮을 수 있다(자주 변할 수 있음). 알림 발송 단계(spec 07)에서 기본 OFF로 둘지.
 - `@tbd` 동일 시간대 강의가 시리즈로 사라지고 다시 등장하는 경우(SWM 운영 일시 비공개) 어떻게 보정할지. 현재 모델은 각각 `removed` → `added`로 보낸다.
 
 ## 13. 관련 링크

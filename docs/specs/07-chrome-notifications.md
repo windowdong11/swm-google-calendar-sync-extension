@@ -1,9 +1,25 @@
-# Spec 07: Chrome notification 통합
+# Spec 07: Chrome notification 통합 (폐기)
 
-> Status: draft
-> Branch: feature/07-chrome-notifications
+> Status: deprecated (2026-04-29)
+> Branch: feature/07-chrome-notifications (생성하지 않음)
 > Phase: 2
 > Depends on: 06 (이벤트 입력)
+
+## 폐기 사유
+
+2026-04-29 사용자 결정: 시간/장소/메타 변경 알림 기능 자체 제거. 알림 카테고리는 두 종류만 남음.
+
+- 신규 특강 알림 → spec 09에서 처리
+- 자리 알림 → spec 10에서 처리
+
+`chrome.notifications.create()` 호출은 spec 08(알림 큐)이 enqueue 시점에 함께 책임진다(큐와 알림이 항상 같이 발생하므로 통합). 권한·옵션 토글도 spec 08로 이관.
+
+본 문서는 결정 이력 추적을 위해 보존하나 더 이상 진입하지 않는다. README의 Phase 인덱스에서 deprecated 표시. 후임 결정이 바뀌면 본 spec을 다시 살리지 말고 새 번호로 재발행.
+
+이하 본문은 폐기 시점의 초안이며 더 이상 유효하지 않다.
+
+---
+
 
 ## 1. 목적
 
