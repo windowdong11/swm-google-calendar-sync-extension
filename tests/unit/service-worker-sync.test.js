@@ -305,6 +305,30 @@ test("SYNC_SOURCE_LECTURES deletes a remaining Calendar event for a cancelled le
   assert.equal(harness.mappings[lecture.qustnrSn], undefined);
 });
 
+test("SYNC_SOURCE_LECTURES deletes a remaining cancelled lecture event even without connection info", async () => {
+  const lecture = makeLecture({ qustnrSn: "50002" });
+  const event = buildManagedGoogleEvent(lecture, "orphan-event");
+  const harness = makeHarness({
+    initialEvents: {
+      [event.id]: event
+    }
+  });
+
+  const response = await harness.sendMessage({
+    type: "SYNC_SOURCE_LECTURES",
+    payload: {
+      lectures: [],
+      inactiveLectures: [lecture],
+      sourceComplete: true
+    }
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.stats.deleted, 1);
+  assert.equal(harness.events[event.id], undefined);
+  assert.equal(harness.mappings[lecture.qustnrSn], undefined);
+});
+
 test("SYNC_SOURCE_LECTURES keeps final active state when active and cancelled rows coexist", async () => {
   const lecture = makeLecture();
   const event = buildManagedGoogleEvent(lecture, "old-event");
@@ -337,9 +361,78 @@ test("SYNC_SOURCE_LECTURES keeps final active state when active and cancelled ro
   });
 
   assert.equal(response.ok, true);
-  assert.equal(response.stats.deleted, 1);
-  assert.equal(response.stats.created, 1);
-  assert.equal(harness.events["old-event"], undefined);
-  assert.equal(harness.mappings[lecture.qustnrSn].eventId, "created-1");
-  assert.equal(harness.events["created-1"].extendedProperties.private.somaQustnrSn, lecture.qustnrSn);
+  assert.equal(response.stats.deleted, 0);
+  assert.equal(response.stats.created, 0);
+  assert.equal(response.stats.unchanged, 1);
+  assert.equal(harness.events["old-event"].extendedProperties.private.somaQustnrSn, lecture.qustnrSn);
+  assert.equal(harness.mappings[lecture.qustnrSn].eventId, "old-event");
+});
+
+test("UPSERT_SOURCE_LECTURE updates an existing detail-apply Calendar event", async () => {
+  const lecture = makeLecture();
+  const staleEvent = buildManagedGoogleEvent({
+    ...lecture,
+    title: "[예시] 이전 제목"
+  }, "detail-event");
+  const harness = makeHarness({
+    initialEvents: {
+      [staleEvent.id]: staleEvent
+    },
+    initialMappings: {
+      [lecture.qustnrSn]: {
+        calendarId: "primary",
+        eventId: staleEvent.id,
+        qustnrSn: lecture.qustnrSn,
+        title: "[예시] 이전 제목",
+        place: lecture.place,
+        summary: `${lecture.place}-[예시] 이전 제목`,
+        startAt: lecture.startAt,
+        endAt: lecture.endAt,
+        detailUrl: lecture.detailUrl
+      }
+    }
+  });
+
+  const response = await harness.sendMessage({
+    type: "UPSERT_SOURCE_LECTURE",
+    payload: lecture
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.status, "updated");
+  assert.equal(harness.events[staleEvent.id].summary, `${lecture.place}-${lecture.title}`);
+  assert.equal(harness.mappings[lecture.qustnrSn].eventId, staleEvent.id);
+});
+
+test("DELETE_CALENDAR_EVENT_BY_LECTURE removes the detail-cancel Calendar event and connection info", async () => {
+  const lecture = makeLecture();
+  const event = buildManagedGoogleEvent(lecture, "detail-cancel-event");
+  const harness = makeHarness({
+    initialEvents: {
+      [event.id]: event
+    },
+    initialMappings: {
+      [lecture.qustnrSn]: {
+        calendarId: "primary",
+        eventId: event.id,
+        qustnrSn: lecture.qustnrSn,
+        title: lecture.title,
+        place: lecture.place,
+        summary: `${lecture.place}-${lecture.title}`,
+        startAt: lecture.startAt,
+        endAt: lecture.endAt,
+        detailUrl: lecture.detailUrl
+      }
+    }
+  });
+
+  const response = await harness.sendMessage({
+    type: "DELETE_CALENDAR_EVENT_BY_LECTURE",
+    payload: lecture
+  });
+
+  assert.equal(response.ok, true);
+  assert.equal(response.deletedCount, 1);
+  assert.equal(harness.events[event.id], undefined);
+  assert.equal(harness.mappings[lecture.qustnrSn], undefined);
 });
