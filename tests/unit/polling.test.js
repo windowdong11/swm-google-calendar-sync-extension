@@ -361,3 +361,39 @@ test("handleAlarmFire stores rangeDays-aware snapshot metadata on success", asyn
   assert.equal(capturedRangeDays, 14);
   assert.equal(store.local.lectureSnapshot.takenAt, "2026-04-29T08:00:00.000Z");
 });
+
+test("handleAlarmFire writes ISO date rangeStart/rangeEnd derived from rangeDays", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: true, html: "<html></html>" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  const snapshot = store.local.lectureSnapshot;
+  assert.match(snapshot.rangeStart, /^\d{4}-\d{2}-\d{2}$/);
+  assert.match(snapshot.rangeEnd, /^\d{4}-\d{2}-\d{2}$/);
+  assert.equal(snapshot.rangeStart, "2026-04-29");
+  assert.equal(snapshot.rangeEnd, "2026-05-29");
+});
+
+test("handleAlarmFire honors rangeDays=7 for rangeEnd ISO date", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 7 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: true, html: "<html></html>" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T00:00:00.000Z")
+  });
+
+  const snapshot = store.local.lectureSnapshot;
+  assert.equal(snapshot.rangeStart, "2026-04-29");
+  assert.equal(snapshot.rangeEnd, "2026-05-06");
+});

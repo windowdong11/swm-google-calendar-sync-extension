@@ -77,13 +77,34 @@
     return { scheduled: true, periodInMinutes: settings.intervalMinutes };
   }
 
-  function nowIso(now) {
+  function nowDate(now) {
     if (typeof now === "function") {
       const value = now();
-      if (value instanceof Date) return value.toISOString();
-      if (typeof value === "string") return value;
+      if (value instanceof Date) return value;
+      if (typeof value === "string") {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) return parsed;
+      }
     }
-    return new Date().toISOString();
+    return new Date();
+  }
+
+  function nowIso(now) {
+    return nowDate(now).toISOString();
+  }
+
+  function pad2(value) {
+    return String(value).padStart(2, "0");
+  }
+
+  function isoDate(date) {
+    return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+  }
+
+  function computeRangeIsoDates(startDate, rangeDays) {
+    const safeDays = Number.isFinite(rangeDays) && rangeDays > 0 ? rangeDays : 0;
+    const end = new Date(startDate.getTime() + safeDays * 24 * 60 * 60 * 1000);
+    return { rangeStart: isoDate(startDate), rangeEnd: isoDate(end) };
   }
 
   async function handleAlarmFire(chromeApi, deps = {}) {
@@ -97,7 +118,9 @@
 
     const settings = await readSettings(chromeApi);
     const state = await readState(chromeApi);
-    const polledAt = nowIso(now);
+    const polledAtDate = nowDate(now);
+    const polledAt = polledAtDate.toISOString();
+    const { rangeStart, rangeEnd } = computeRangeIsoDates(polledAtDate, settings.rangeDays);
 
     const fetchResult = await fetchListHtml({ rangeDays: settings.rangeDays });
 
@@ -107,8 +130,8 @@
         const lectures = Array.isArray(parsed?.lectures) ? parsed.lectures : [];
         const snapshot = {
           takenAt: polledAt,
-          rangeStart: "",
-          rangeEnd: "",
+          rangeStart,
+          rangeEnd,
           lectures
         };
         await chromeApi.storage.local.set({ lectureSnapshot: snapshot });
