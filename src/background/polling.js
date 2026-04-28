@@ -163,7 +163,7 @@
       await clearAlarm(chromeApi);
     } else if (settings.enabled) {
       await clearAlarm(chromeApi);
-      await createOneShotAlarm(chromeApi, nextBackoffMinutes(consecutiveFailures));
+      await createOneShotAlarm(chromeApi, nextBackoffMinutes(consecutiveFailures - 1));
     }
 
     return { ok: false, error: errorPayload.message };

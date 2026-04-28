@@ -174,7 +174,7 @@ test("handleAlarmFire on auth-expired pauses polling and clears alarm", async ()
 test("handleAlarmFire on generic failure increments failures and reschedules with backoff", async () => {
   const { chrome, store, alarms } = makeChromeMock({
     pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
-    pollingState: { ...Polling.DEFAULT_POLLING_STATE, consecutiveFailures: 1 }
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE, consecutiveFailures: 2 }
   });
 
   const deps = {
@@ -186,7 +186,7 @@ test("handleAlarmFire on generic failure increments failures and reschedules wit
   const result = await Polling.handleAlarmFire(chrome, deps);
 
   assert.equal(result.ok, false);
-  assert.equal(store.local.pollingState.consecutiveFailures, 2);
+  assert.equal(store.local.pollingState.consecutiveFailures, 3);
   assert.equal(store.local.pollingState.pausedReason, null);
   const created = alarms.created.find((a) => a.name === Polling.ALARM_KEY);
   assert.ok(created, "alarm should be rescheduled");
@@ -241,7 +241,7 @@ test("updateSettings clears pausedReason when re-enabling polling", async () => 
   assert.equal(store.local.pollingState.consecutiveFailures, 0);
 });
 
-test("handleAlarmFire reschedules with 5m backoff after first failure (counter 0 -> 1)", async () => {
+test("handleAlarmFire reschedules with 1m backoff after first failure (counter 0 -> 1)", async () => {
   const { chrome, alarms } = makeChromeMock({
     pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
     pollingState: { ...Polling.DEFAULT_POLLING_STATE }
@@ -254,6 +254,22 @@ test("handleAlarmFire reschedules with 5m backoff after first failure (counter 0
   };
 
   await Polling.handleAlarmFire(chrome, deps);
+
+  const created = alarms.created.find((a) => a.name === Polling.ALARM_KEY);
+  assert.equal(created.info.delayInMinutes, 1);
+});
+
+test("handleAlarmFire reschedules with 5m backoff after second failure (counter 1 -> 2)", async () => {
+  const { chrome, alarms } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE, consecutiveFailures: 1 }
+  });
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async () => ({ ok: false, error: "boom" }),
+    parseInOffscreen: async () => ({ lectures: [] }),
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
 
   const created = alarms.created.find((a) => a.name === Polling.ALARM_KEY);
   assert.equal(created.info.delayInMinutes, 5);
