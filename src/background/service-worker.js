@@ -219,7 +219,8 @@ function buildLecturePayload(input, mapping = {}) {
   const startAt = normalizeCalendarDateTime(input?.startAt || mapping.startAt || "");
   const endAt = normalizeCalendarDateTime(input?.endAt || mapping.endAt || "");
   const detailUrl = normalizeText(input?.detailUrl || mapping.detailUrl);
-  const summary = normalizeText(input?.summary || mapping.summary || buildLectureSummary(title, place));
+  const shouldReuseMappingSummary = !input?.summary && !input?.title && !input?.place;
+  const summary = normalizeText(input?.summary || (shouldReuseMappingSummary ? mapping.summary : "") || buildLectureSummary(title, place));
 
   if (!qustnrSn) {
     throw new Error("특강 식별자(qustnrSn)가 필요합니다.");
@@ -613,6 +614,7 @@ async function syncSourceLectures(inputs, options = {}) {
   const dedupedInactiveLectures = new Map();
   for (const input of options.inactiveLectures || []) {
     if (!input?.title || !input?.startAt || !input?.endAt) continue;
+    if (input.qustnrSn && dedupedLectures.has(input.qustnrSn)) continue;
     const key = input.qustnrSn || `${input.title}@@${input.startAt}@@${input.endAt}`;
     dedupedInactiveLectures.set(key, input);
   }
