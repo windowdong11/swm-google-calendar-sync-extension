@@ -14,7 +14,7 @@ SoMA 신청 특강은 기존 OAuth 흐름으로 이미 Google Calendar에 삽입
 ## 2. 사용자 스토리
 
 - as a 연수생, I want 브라우저 어디에서나 확장 아이콘 한 번으로 내 Google Calendar 일정을 시간축으로 보고, so that "이번 주에 무엇을 하기로 했는지" 한눈에 확인한다.
-- as a 연수생, I want 빈 시간대를 마우스로 드래그하면 그 시간에 완전히 맞는 미신청 SoMA 특강만 사이드 패널에 보고, so that "내 빈 1시간에 들어갈 수 있는 특강이 뭔지"를 캘린더 컨텍스트에서 바로 본다.
+- as a 연수생, I want 빈 시간대를 마우스로 드래그하면 그 시간에 완전히 맞는 미신청 SoMA 특강만 사이드 패널에 보고, so that "내 빈 시간에 들어갈 수 있는 특강이 뭔지"를 캘린더 컨텍스트에서 바로 본다.
 - as a 연수생, I want 사이드 패널 카드를 클릭해 SoMA 상세 페이지로 이동하고, so that 캘린더 컨텍스트에서 신청 흐름으로 자연스럽게 진입한다.
 
 ## 3. 범위
@@ -60,7 +60,7 @@ SoMA 신청 특강은 기존 OAuth 흐름으로 이미 Google Calendar에 삽입
 - Google Calendar fetch 실패(OAuth 미인증·네트워크): 캘린더 본체에 "Google Calendar에 접근할 수 없습니다. 확장 옵션에서 권한을 확인하세요." 안내. 사이드 패널은 정상 동작.
 - 빈 lectureSnapshot + 끝난 특강만 있음: 사이드 패널에 "현재 신청 가능한 특강이 없습니다." 안내.
 - 드래그 영역에 완전 포함되는 lecture 0건: 사이드 패널에 "이 시간대에 들어맞는 미신청 특강이 없습니다." 안내.
-- 드래그 영역이 시간축 외(예: 02:00~05:00): UI에서 드래그 영역을 시간축 내(08:00~24:00)로 clamp. clamp 후에도 빈 lecture면 위 안내.
+- 드래그 영역이 시간축 외(예: 02:00~05:00): UI에서 드래그 영역을 시간축 내(08:00~24:00)로 clamp.
 - Google Calendar 이벤트가 자정을 넘는 경우(`endAt`이 다음 날): 시작일 셀과 다음 날 셀 두 곳에 분할 렌더(연속선 표시).
 - SoMA 신청 특강(`extendedProperties.private.somaManaged === "1"`)은 일반 일정과 시각 구분(테두리·배경 톤).
 - 한국 표준시(Asia/Seoul) 기준으로 그룹화. lectureSnapshot의 `startAt`은 Seoul ISO, Google Calendar 이벤트는 RFC3339(UTC offset 포함)이라 양쪽 모두 KST로 변환 후 비교.
