@@ -161,16 +161,19 @@ Google Calendar 연동은 `chrome.identity.getAuthToken()`과 Google Calendar AP
 
 ## 7. Content Script 메시지 타입
 
-content script는 `chrome.runtime.sendMessage()`로 background service worker에 작업을 요청한다.
+content script와 확장 자체 페이지(예: `src/calendar/calendar.html`)는 `chrome.runtime.sendMessage()`로 background service worker에 작업을 요청한다.
 
 - `GET_SETTINGS`: 사용자 설정을 가져온다.
 - `GET_LECTURE_MAPPINGS`: 특강 ID 목록에 해당하는 로컬 매핑을 가져온다.
 - `AUTH_CONNECT_GOOGLE`: 대화형 Google OAuth 연결을 시작한다.
-- `GET_CALENDAR_EVENTS`: 지정한 시간 범위의 Google Calendar 일정을 조회한다.
+- `GET_CALENDAR_EVENTS`: 지정한 시간 범위(`{timeMin, timeMax}` ISO)의 Google Calendar 일정을 조회한다. content script와 calendar 페이지가 공통 사용.
 - `DELETE_CALENDAR_EVENT`: 특정 캘린더 이벤트를 직접 삭제한다. `allowDirectDelete` 설정이 켜져 있어야 한다.
 - `UPSERT_SOURCE_LECTURE`: 단일 특강을 Google Calendar에 생성 또는 갱신한다.
 - `SYNC_SOURCE_LECTURES`: 접수내역 기준 특강 목록을 Google Calendar와 전체 동기화한다.
 - `DELETE_CALENDAR_EVENT_BY_LECTURE`: 특강 정보와 매핑을 기준으로 연결된 Google Calendar 일정을 삭제한다.
+- `POLLING_TRIGGER_NOW`: 백그라운드 폴링(spec 05)을 즉시 1회 실행한다. calendar 페이지의 "지금 갱신" 버튼이 사용.
+- `POLLING_GET_STATE`: 폴링 상태(`lectureSnapshot`, `pollingState`)를 조회한다.
+- `POLLING_UPDATE_SETTINGS`: 폴링 설정(주기·범위·활성)을 갱신한다.
 
 ## 8. 사용자 설정
 
