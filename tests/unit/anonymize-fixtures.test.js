@@ -1,11 +1,13 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 const { pathToFileURL } = require("node:url");
 
 const libUrl = pathToFileURL(
   path.resolve(__dirname, "../../scripts/lib/anonymize.mjs")
 ).href;
+const cliPath = path.resolve(__dirname, "../../scripts/anonymize-fixtures.mjs");
 
 let anonymizeHtml;
 let PLACEHOLDER_NAMES;
@@ -46,6 +48,31 @@ test("masks 7-digit-or-more numbers but preserves shorter qustnrSn-like values",
   assert.match(out, /1234567/);
   assert.match(out, />30</);
   assert.match(out, />123</);
+});
+
+test("digit boundary: 6-digit preserved, 7+ digits masked including 11+", () => {
+  // 6-digit boundary: must be preserved (qustnrSn-like).
+  const six = `<td>123456</td>`;
+  const sixOut = anonymizeHtml(six);
+  assert.match(sixOut, />123456</, "6-digit value must be preserved");
+
+  // 7-digit: masked.
+  const seven = `<td>1234567</td>`;
+  const sevenOut = anonymizeHtml(seven);
+  assert.match(sevenOut, />1234567</, "7-digit input collapses to placeholder 1234567");
+
+  // 10-digit: masked.
+  const ten = `<td>1234567890</td>`;
+  const tenOut = anonymizeHtml(ten);
+  assert.doesNotMatch(tenOut, /1234567890/);
+  assert.match(tenOut, />1234567</);
+
+  // 11-digit: masked. Use a value that does NOT match the Korean phone regex
+  // (which requires 010/011/016/017/018/019 prefix).
+  const eleven = `<td>22345678901</td>`;
+  const elevenOut = anonymizeHtml(eleven);
+  assert.doesNotMatch(elevenOut, /22345678901/, "11-digit non-phone must be masked");
+  assert.match(elevenOut, />1234567</);
 });
 
 test("masks emails", () => {
@@ -129,4 +156,26 @@ test("does not change input that has no PII", () => {
 
 test("placeholder pool matches spec", () => {
   assert.deepEqual(PLACEHOLDER_NAMES, ["홍길동", "김연수", "박민지", "이서윤", "최지호"]);
+});
+
+test("CLI exits with code 1 on unknown option", () => {
+  const result = spawnSync(process.execPath, [cliPath, "--bogus-flag"], {
+    encoding: "utf8"
+  });
+  assert.equal(result.status, 1, `expected exit code 1, got ${result.status} (stderr: ${result.stderr})`);
+  assert.match(result.stderr, /Unknown option/);
+});
+
+test("uuid sentinel does not collide with raw text containing 'UUID_PLACEHOLDER'", () => {
+  // Raw HTML happens to contain the literal string "UUID_PLACEHOLDER" (e.g.
+  // a comment or inert template token). The internal sentinel must not be
+  // confusable with this substring; output must keep the raw token intact and
+  // the csrf UUID must be masked exactly once.
+  const input = `<!-- UUID_PLACEHOLDER comment --><input name="csrfToken" value="a3f5c2e1-1234-4abc-89de-1234567890ab"><span>literal UUID_PLACEHOLDER text</span>`;
+  const out = anonymizeHtml(input);
+  assert.doesNotMatch(out, /a3f5c2e1-1234-4abc-89de-1234567890ab/);
+  assert.match(out, /00000000-0000-0000-0000-000000000000/);
+  // The accidental literal must round-trip untouched (twice).
+  const literalCount = (out.match(/UUID_PLACEHOLDER/g) || []).length;
+  assert.equal(literalCount, 2, `expected 2 raw UUID_PLACEHOLDER, got ${literalCount} in: ${out}`);
 });

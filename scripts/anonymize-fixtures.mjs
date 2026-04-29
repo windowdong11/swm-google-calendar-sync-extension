@@ -140,7 +140,7 @@ function main() {
     opts = parseArgs(process.argv.slice(2));
   } catch (err) {
     console.error(err.message);
-    process.exit(2);
+    process.exit(1);
   }
 
   if (!existsSync(RAW_DIR) && !opts.input) {
