@@ -15,21 +15,33 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
-- 기존 dirty 상태(modified service-worker.js + 신규 테스트 + agent-guide.md)를 의미별 4커밋으로 분할
+### 2026-04-29 Round 0 머지 완료
+
+**spec 05 (background polling) 핵심 경로 MVP**
+- `feature/05-background-polling` 7 커밋 → main 머지
+- `chrome.alarms` 10분 주기 + offscreen document로 DOMParser 위임 + `lectureSnapshot`/`pollingState` storage + 인증 만료 감지 + backoff(1m→5m→15m→60m→max-retry)
+- 신규: `src/background/{polling,swm-fetch,offscreen}.{js,html}`, `tests/unit/{polling,swm-fetch}.test.js`
+- 수정: `manifest.json` (alarms·offscreen permission), `src/background/service-worker.js` (alarm 핸들러 + 4개 메시지 타입)
+- 55 테스트 추가, 100% pass
+
+**비식별화 도구**
+- `chore/anonymize-fixtures-tooling` 7 커밋 → main 머지
+- `npm run refresh:fixtures` — 사용자가 `.agent/raw/`에 raw HTML 저장 → 자동 마스킹 → `tests/fixtures/site-current/` 또는 `mock/` 갱신
+- 한글 이름·7+자리 숫자·이메일·전화·csrfToken UUID 마스킹, placeholder sentinel로 idempotent 보장
+- 24 테스트 추가, 실 fixture 3개에 대해 idempotent + fixturePreserved 검증 통과
+- 신규: `scripts/lib/anonymize.mjs`, `scripts/anonymize-fixtures.mjs`, `docs/agent-troubleshooting/refresh-fixtures.md`, `tests/unit/anonymize-fixtures.test.js`
+- 수정: `package.json`, `.gitignore`
+
+### 직전 세션(2026-04-28)에서 한 일
+
+- 기존 dirty 상태를 의미별 4커밋으로 분할
 - spec 디렉토리(`docs/specs/`) 골격 + 메타 README + spec 01~10 draft 작성
-- 빈 `swm-schedule-alert/` 디렉토리 폐기, 모든 작업을 `soma-schedule-helper/`로 통합
+- 빈 `swm-schedule-alert/` 디렉토리 폐기
 
-main 브랜치 신규 커밋:
-
-```
-3052c46 docs: add spec drafts for calendar view, filtering, polling, notifications
-7e51426 docs: add agent guide for extension internals
-500117c test: add content script DOM and manifest host coverage
-df5b28f test: cover orphan cancel deletion and active/cancel coexistence in sync
-2983c64 fix: preserve lecture summary and dedupe inactive lectures by qustnrSn
-```
-
-코드는 한 줄도 추가하지 않았다. 모든 spec은 `Status: draft`.
+### 현재 상태
+- spec 05: `Status: shipped` (옵션 UI·라이브 URL은 후속 PR)
+- spec 01·02·03·04·06·08·09·10: `Status: draft`
+- spec 07: `Status: deprecated` (책임 spec 08에 흡수)
 
 ---
 
@@ -61,23 +73,24 @@ spec 02·04 코딩 첫 단계 결정.
 - [ ] **U-02-2** 카테고리 매핑 편집 UI 위치 — 추천: 옵션 페이지 (편집 빈도 낮음)
 - [ ] **U-04-2** 텍스트 검색 spec 04 포함 vs 분리 — 추천: 별도 spec(예: `11-text-search.md`)으로 분리
 
-### 묶음 D — B-1 캡처 시 자동 해소 (3개)
+### 묶음 D — B-1 일부 해소 (2026-04-29, site-current fixture 분석)
 
-B-1(§4)이 들어오면 함께 풀림.
+`tests/fixtures/site-current/list.html` 17KB 분석 결과 다음 확정:
 
-- [ ] 🛑 **U-02-1** 실제 SWM 목록 페이지 카테고리 DOM 위치 (B-1 의존)
-- [ ] 🛑 **U-03-1** 실제 SWM 페이지 멘토명 DOM 위치 (B-1 의존)
-- [ ] ✅ **U-03-2** 멘토명 표기에 소속 포함 정도 — 추천: 표시는 원문, 매칭은 정규화 키
+- [x] **U-02-1** 카테고리 컬럼은 list.do에 **노출되지 않음**. 컬럼 헤더: NO·제목·접수기간·진행날짜·모집인원·개설승인·상태·작성자·등록일. spec 02는 상세 페이지 의존 또는 별도 매핑 UI 필요.
+- [x] **U-03-1** 멘토명 = "작성자" 컬럼 (마지막에서 두 번째). list.do 행에서 직접 추출 가능.
+- [ ] ✅ **U-03-2** 멘토명 표기에 소속 포함 정도 — 추천: 표시는 원문, 매칭은 정규화 키 (spec 03 코드 진입 시점에 결정)
 
-### 묶음 E — spec 05 옵션 UI 단계 (2개, ⏸️ 부분 차단)
+### 묶음 E — spec 05 옵션 UI 후속 PR (2개, ⏸️ 부분 차단)
 
-spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵션 UI 작성 시 결정.
+spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 - [ ] **U-05-1** 폴링 활성 안내·동의 — 추천: 옵션 페이지 단순 토글 + 토글 옆 트래픽·배터리 안내 문구
 - [ ] **U-05-2** 인증 만료 시 처리 — 추천: 사용자 안내만 (보이지 않는 redirect 추적은 위험)
 
 ### 결정 완료 항목 (참고)
 
+- [x] **Spec 05 머지 (2026-04-29)** — D-05-1 chrome.offscreen + DOMParser, D-05-3 코드 명칭 `parseListLectures` 사용. 후속 PR로 분리: 옵션 UI(묶음 E), 라이브 URL 쿼리스트링(D-05-2 — B-1 raw 캡처 후)
 - [x] **Spec 01 — 캘린더 뷰** — U-01-1 새 탭 전용 페이지 진입, U-01-2 시간축 08:00~24:00, D-1 데이터 소스 = spec 05 `lectureSnapshot` (D-3 결정)
 - [x] **2026-04-29 묶음 A + spec 07 폐기**
   - **spec 07 폐기**: 시간/장소/메타 변경 알림 기능 자체 제외. chrome.notifications 발송 책임은 spec 08이 흡수
@@ -113,32 +126,36 @@ spec 05 핵심 경로(alarm·fetch·storage)는 결정 없이 진입 가능. 옵
 
 코딩으로 풀 수 없고 **사용자 또는 사용자 환경에서 정보 수집**이 필요한 것.
 
-### B-1 SWM 페이지 실제 DOM 캡처 ⭐ 가장 큰 레버
+### B-1 SWM 페이지 raw 캡처 — 일부 해소 (2026-04-29)
 
-- **무엇이 필요한가**: SWM 특강 목록·상세 페이지의 카테고리/멘토 컬럼이 어느 DOM 노드에 들어 있는지
-- **왜 가장 큰가**: 이 캡처 하나로 묶음 D 결정 3개(U-02-1·U-03-1·U-03-2)가 동시 해소되며 spec 02·03·04·09 진입이 한 번에 잠금 해제됨
-- **구체적 행동**:
-  1. SWM 특강 목록 페이지(`/sw/mypage/mentoLec/list.do`)와 상세 페이지(`/sw/mypage/mentoLec/view.do`)를 열어 HTML 저장
-  2. `mock/list.html`·`mock/view-apply.html`에 동일 구조 추가 (개인 식별 정보는 비식별화)
-  3. 이때 카테고리·멘토·정원·신청수가 들어간 행/필드 선택자를 파악
-- **막힐 경우 우회**: 사용자가 페이지 캡처를 보내주면 다음 세션에서 `parsers.js` 확장 작업 진행 가능
+- **현재 상태**:
+  - `tests/fixtures/site-current/list.html`(17KB) 분석으로 **컬럼 구조 확정**: NO·제목·접수기간·진행날짜·모집인원·개설승인·상태·작성자·등록일
+  - 카테고리 컬럼 없음(spec 02는 상세 의존), 멘토명=작성자(spec 03), 정원=모집인원(spec 04·06·10) 노출 ✓
+- **남은 부분**: 신청수(applyCnt) 노출 여부 — list.do에 별도 컬럼 없음. 상세 페이지에서만 보일 가능성 (B-2와 묶임)
+- **워크플로우 정착**: 사용자가 더 새로운 raw 캡처가 필요하면 `.agent/raw/`에 저장 → `npm run refresh:fixtures` 실행 → `tests/fixtures/site-current/` 또는 `mock/` 갱신. `docs/agent-troubleshooting/refresh-fixtures.md` 가이드 참조.
 
-### B-2 정원·신청수 정보 노출 여부 확인
+### B-2 정원·신청수 정보 노출 여부 — 부분 확인 (2026-04-29)
 
-- **무엇이 필요한가**: 목록 페이지에 정원/applyCnt가 노출되는가, 아니면 상세 페이지에서만 보이는가
-- **왜 필요한가**: spec 04(자리 여유 필터), spec 06(seat 이벤트), spec 10(자리 알림) 핵심
-- **구체적 행동**: 목록 페이지 행을 보고 잔여석/정원 정보가 있는지 확인. 없다면 폴링이 각 상세 페이지를 N번 추가 fetch해야 하는지(=비용 증가) 의사결정 필요
-- **만약 상세에서만 보이면**: spec 05·06에 "상세 페이지 폴링 추가 단계" 항목 보강해야 함
+- **확정**: 정원(모집인원) = list.do 컬럼에 노출 ✓
+- **미확정**: 신청수(applyCnt) — list.do에는 컬럼 없음. 상세 페이지(`view.do`)에 `parseDetailLectureInfo`로 추출 (parsers.js L327 시그니처에 `appCnt`/`applyCnt` 보유) → 폴링이 각 상세 페이지를 추가 fetch 해야 함
+- **결정 필요**: spec 05·06에 "상세 페이지 추가 폴링 단계" 보강. 비용 평가(특강 N개 × 상세 fetch) — Round 2 spec 06 진입 시 결정
 
-### B-3 SWM 백그라운드 fetch 인증 검증
+### B-3 SWM 백그라운드 fetch 인증 검증 — 라이브 보류
 
-- **무엇이 필요한가**: 사용자가 swmaestro에 평소 로그인되어 있을 때, service worker의 fetch가 세션 쿠키를 자동으로 동반해 로그인 응답을 받는지 확인
-- **왜 필요한가**: spec 05 폴링 핵심 가정
-- **구체적 행동**: `feature/05-background-polling` 브랜치에서 service worker에 한 줄짜리 fetch + 응답 본문에 로그인 폼 마커가 있는지 검사하는 디버그 스크립트로 검증. 실패 시 spec 05의 인증 만료 처리·자동 재인증 옵션 재검토.
+- **현재 상태**: spec 05 머지됨. fixture 기반 단위 테스트로 회로 검증 완료 (55/55 pass).
+- **미완료**: 라이브 환경(사용자 Chrome 확장 service worker)에서 실제 swmaestro 세션 쿠키 자동 동반 여부 검증
+- **외부 검증 한계**: Python urllib 2단계 form 로그인 시도 시 list.do가 `main.do`로 redirect 또는 913자 빈 응답 반환 — SoMA가 user-agent·세션 type별 다른 응답을 주거나 SPA·동적 렌더링. 외부 fetch로는 라이브 검증 불가능.
+- **검증 방법**: 사용자 unpacked 로드 → Chrome service worker 콘솔에서 `chrome.storage.sync.set({pollingSettings:{enabled:true,intervalMinutes:10,rangeDays:30}}); chrome.runtime.sendMessage({type:'POLLING_TRIGGER_NOW'})` 실행 → `chrome.storage.local.get('lectureSnapshot')`에 `lectures.length > 0` 확인. 후속 옵션 UI 작성 후 한 번 검증.
 
 ### B-4 (선택) Chrome OS 알림 권한 동작 확인
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
+
+### B-5 (신규) `tests/unit/content-scripts.test.js` 회귀
+
+- **무엇**: `detail cancel intercepts SoMA cancel success and requests Calendar deletion` 테스트가 main HEAD에서 fail (timeout). spec 05·chore PR 영향 아님(main HEAD 이전부터 fail).
+- **왜 필요한가**: npm test가 깨끗하게 통과해야 회귀 감지가 가능. CI 들어오기 전 정리 권장.
+- **구체적 행동**: Round 1 시작 전 단발 fix 세션. content-scripts.test.js와 관련 src/content/* 코드를 비교, timeout 사유 파악. 30분 이내 예상.
 
 ---
 
@@ -171,24 +188,23 @@ B-1 ─── 02 (category) ──┐
 - 09 ← 03 + 06 + 08
 - 10 ← 06 + 08 + B-2
 
-### 5.2 Round 0 — 시작 직전 (병렬 2개)
+### 5.2 Round 0 — ✅ 완료 (2026-04-29)
 
-| 트랙 | 작업 | 산출물 |
+| 트랙 | 작업 | 결과 |
 |---|---|---|
-| 사용자 | **B-1 페이지 캡처** (목록·상세 HTML 비식별화 → `mock/`) | mock fixture 추가 |
-| Claude | `feature/05-background-polling` 브랜치 → **B-3 인증 검증** → spec 05 핵심 경로 | spec 05 shipped |
+| Claude | spec 05 핵심 경로 MVP | ✅ 머지됨 (7 커밋) |
+| Claude | 비식별화 도구 (`npm run refresh:fixtures`) | ✅ 머지됨 (7 커밋) |
+| 자동 분석 | B-1 부분 해소 (site-current fixture) | ✅ U-02-1·U-03-1 확정, B-2 정원 노출 확정 |
 
-> 묶음 A·spec 07 폐기는 2026-04-29 결정 완료. B-1 캡처는 시간 들지만 Claude의 spec 05 작업과 완전 병렬.
-
-### 5.3 Round 1 — spec 05 머지 후 (병렬 2개)
+### 5.3 Round 1 — 다음 진입 (병렬 2개)
 
 | 트랙 | 작업 | 의존 |
 |---|---|---|
 | Claude | `feature/01-calendar-view` → `calendar.html` 렌더 → 머지 | spec 05 ✅ |
+| Claude | (선택) B-5 `content-scripts.test.js` 회귀 fix — 단발 30분 | 독립 |
 | 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | — |
-| 사용자 | **B-2 확인** (목록 페이지 정원/applyCnt 노출 여부) | spec 06·10 영향 |
 
-> spec 01은 사용자 결정 의존성이 없어 Claude가 단독 진행. 사용자는 이 시간에 알림 정책·범위 결정·B-2 확인을 모아 처리.
+> spec 01은 사용자 결정 의존성이 없어 Claude가 단독 진행. 사용자는 이 시간에 알림 정책·범위 결정 모아 처리. B-5 회귀 fix는 spec 01 작업 전 또는 후 단발로.
 
 ### 5.4 Round 2 — 두 트랙 병렬 (B-1 캡처 도착 가정)
 
@@ -218,50 +234,64 @@ Track A (service-worker 흐름):     Track B (parsers.js 흐름):
 ### 5.6 타임라인
 
 ```
-Round 0 ┃ [Claude: spec 05]                            ┃
-        ┃ [User: B-1 캡처]                             ┃
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Round 1 ┃ [Claude: spec 01]                            ┃
-        ┃ [User: 묶음B(3) + 묶음C(2) + B-2]            ┃
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Round 2 ┃ [Claude: 06→08]      →  [Claude: 02→03→04]   ┃
-        ┃ (또는 worktree로 진짜 병렬)                  ┃
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
-        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Round 0 ┃ ✅ 완료 — spec 05 + 비식별화 도구 머지 (2026-04-29)        ┃
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Round 1 ┃ [Claude: spec 01] + (선택) B-5 회귀 fix                    ┃ ← 다음 진입
+        ┃ [User: 묶음B(3) + 묶음C(2)]                                ┃
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Round 2 ┃ [Claude: 06→08]      →  [Claude: 02→03→04]                 ┃
+        ┃ (B-2 신청수 결정 — 상세 폴링 도입 여부)                    ┃
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      ┃
+        ┃ + spec 05 옵션 UI 후속 PR (묶음 E 결정 후)                 ┃
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### 5.7 병렬 효율 핵심 룰
 
-1. **Round 0에서 B-1을 시작**해야 Round 2 Track B가 막히지 않음. B-1이 가장 큰 레버.
-2. **결정은 묶어서**: 묶음 B(U-08-1·U-09-1·U-10-2)를 따로 결정하면 spec 08/09/10 진입할 때마다 멈춤.
-3. **Track A와 B의 분리**: spec 05 머지 후 두 트랙이 독립이라 세션 단위 분리 가능.
-4. **Round 2 worktree 병렬화는 옵션** — 단일 Claude 세션이라면 Track A 먼저 권장.
+1. **결정은 묶어서**: 묶음 B(U-08-1·U-09-1·U-10-2)를 따로 결정하면 spec 08/09/10 진입할 때마다 멈춤.
+2. **Track A와 B의 분리**: spec 05 머지됐으니 두 트랙(서비스워커 vs parsers) 독립적으로 진행 가능.
+3. **Round 2 worktree 병렬화는 옵션** — 단일 Claude 세션이라면 Track A 먼저 권장.
 
 ### 5.8 함정 포인트
 
-- **B-2 결과가 "상세에서만 노출"이면**: spec 05·06에 상세 폴링 단계 추가 필요. **B-2는 Round 1 초반에 빠르게 확인** 권장.
+- **B-2 신청수 폴링 비용**: list.do에는 신청수 컬럼 없음 → 특강 N개당 상세 fetch 1회 추가. spec 06·10 진입 시 비용 평가 + 부분 폴링 전략(신청수 변동 가능성 높은 항목만) 검토.
 - **parsers.js 충돌**: Track B 안 02·03 진짜 병렬 시 같은 파일 만져 rebase 비용. 02 → 03 순차가 안전.
-- **spec 05의 묶음 E**는 옵션 UI 작성 시점에만 필요. Round 0에서 결정 안 해도 됨.
+- **spec 05의 묶음 E**: 옵션 UI 후속 PR 시점에만 필요. Round 1·2 진행 중엔 default `enabled:false`라 실 사용은 사용자 직접 storage.set으로만 가능.
+- **spec 05 라이브 smoke test 미완**: 후속 옵션 UI PR 작성 시 사용자 unpacked 로드로 실제 검증 필요. 그 전엔 fixture 단위 테스트만 통과 상태.
 
 ---
 
 ## 6. 권장 다음 세션 시작 시퀀스
 
-진입 순서: **Round 0**부터. 묶음 A·spec 07 폐기는 결정 완료.
+진입 지점: **Round 1 — spec 01 calendar-view**. spec 05는 머지됐고 사용자 결정 의존성 없음.
 
-1. Claude는 한 메시지로:
-   - `feature/05-background-polling` 브랜치 생성
-   - **첫 단계 = B-3 검증** (service worker fetch 한 줄, 응답이 로그인 페이지인지 판정)
-   - 검증 결과 200자 이내 보고
-2. B-3 통과 시 spec 05 핵심 경로 구현 (alarm 10분 주기, fetch, parser 재사용, `lectureSnapshot` 저장). 옵션 UI는 최소 토글만.
-3. `code-delegate` 스킬로 coder + code-reviewer 위임 (§7 작업 모드 참조).
-4. PR/머지 → spec 05 `Status: shipped`로 갱신
-5. Round 1 진입 → `feature/01-calendar-view` 브랜치 → `calendar.html` + `chrome.action.onClicked` 핸들러 + 그리드 렌더 구현 + mock fixture 추가.
-6. PR/머지 → spec 01 `Status: shipped`로 갱신
-7. B-1 입력이 들어와 있으면 Round 2 Track B 진입 가능
+### 권장 순서
 
-병행 가능한 사용자 작업: B-1 페이지 캡처, 묶음 B(3개)·묶음 C(2개) 결정, B-2 확인.
+1. **세션 시작 시 한 줄 보고** — 메인이 `git log --oneline main -10`으로 직전 머지 확인 (spec 05·chore 두 머지 커밋 보일 것). 이 NEXT-SESSION.md 읽고 작업 자동 진입.
+
+2. **(선택) B-5 회귀 fix** — `tests/unit/content-scripts.test.js`의 `detail cancel intercepts SoMA cancel success...` 1건 timeout fix. 단발 30분 이내. 별도 브랜치 `fix/content-scripts-test-regression`로 컷.
+   - main HEAD에서 `npm test` 실행 → fail 재현 확인 → 원인 분석 → 단일 fix 커밋 → 머지
+   - spec 01 진입 전에 정리하면 회귀 감지 베이스라인 깨끗
+
+3. **Round 1 진입 — spec 01 calendar-view**:
+   - `feature/01-calendar-view` 브랜치 생성
+   - 코어: 새 `calendar.html` + `chrome.action.onClicked` 핸들러로 새 탭 진입(U-01-1) + 시간축 08:00–24:00 그리드(U-01-2) + `chrome.storage.local.lectureSnapshot` 구독 + mock fixture 추가
+   - `code-delegate` 스킬로 coder + code-reviewer 위임 (§7 참조)
+   - PR/머지 → spec 01 `Status: shipped`로 갱신
+
+4. **사용자 결정 수집 (병행)**: 묶음 B(3)·묶음 C(2)을 spec 01 작업 중 모아 처리. 다음 라운드 Track A·B 진입 전에 모두 결정.
+
+5. **Round 2 진입 준비**: spec 06·08 → spec 02·03·04 (Track A·B 독립). 묶음 B 결정 + B-2 신청수 폴링 전략 결정 완료 시점.
+
+### 파워유저 흐름 (spec 01 진입 직후 한 메시지로)
+
+```
+"Round 1 진입 — feature/01-calendar-view 브랜치 컷, code-delegate로 spec 01 본문 §3·§6·§7만 컨텍스트로 coder 위임. 
+완료 후 reviewer 자동 사이클. 머지·NEXT-SESSION 갱신까지 자동 진행."
+```
+
+이러면 메인이 자동 오케스트레이션. 사용자 개입은 머지 직전 PR 본문 확인 1회.
 
 ---
 
@@ -312,4 +342,5 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)        ┃
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
 - 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 작업 순서 05 → 01로 변경. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
 - 2026-04-29: §2를 묶음 A~E 구조로 재편(차단성 🛑/⏸️/✅ 분류 추가), §5를 라운드 단위로 재배치(Round 0~3 + 의존성 그래프 + 타임라인 + 병렬 효율 룰 + 함정 포인트), §6 권장 시퀀스를 Round 0 진입 형태로 갱신, **§7 작업 모드 신설**(code-delegate + worktree 병렬, 토큰 절약 룰, 안티패턴), §8/§9 번호 시프트.
-- 2026-04-29: 묶음 A 결정 완료 + **spec 07 폐기**. spec 04(almostFull=잔여 1자리), spec 06(time/place/meta 이벤트 제거), spec 07(deprecated 본문 보존), spec 08(chrome.notifications 발송 책임 흡수, 보존 3일, 카테고리 2종), spec 09(전역 알림 + 별표 멘토 필터 + 동일 제목 그룹화로 의미 전환), spec 10(seat-closed 알림 제외) 본문 동기화. 묶음 B에서 U-07-1 제거(3개 남음), §3 @tbd 표·§5 의존성 그래프·라운드 타임라인 갱신. §6 권장 시퀀스에서 묶음 A 답변 단계 제거.
+- 2026-04-29: 묶음 A 결정 완료 + **spec 07 폐기**. spec 04·06·07·08·09·10 본문 동기화.
+- **2026-04-29 Round 0 머지 완료**: spec 05 핵심 경로 MVP(7 커밋, 55 테스트) + 비식별화 도구(`npm run refresh:fixtures`, 7 커밋, 24 테스트) 두 브랜치 main 머지. spec 05 `Status: shipped`. 묶음 D 일부 자동 해소(U-02-1·U-03-1 site-current fixture 분석으로 확정), B-1 부분 해소·B-2 정원 노출 확정. B-3 라이브 검증은 옵션 UI 후속 PR 시점으로 보류. 새 차단 항목 B-5(`content-scripts.test.js` 회귀) 추가. §1·§2(묶음 D·E)·§4(B-1·B-2·B-3·B-5)·§5(타임라인·라운드)·§6(권장 시퀀스 Round 1 진입) 갱신.

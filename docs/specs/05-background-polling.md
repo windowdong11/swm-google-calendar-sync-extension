@@ -1,11 +1,16 @@
 # Spec 05: 백그라운드 주기 폴링
 
-> Status: draft
-> Branch: feature/05-background-polling
-> Phase: 2 (단, **spec 01 calendar-view의 선행 의존성**으로 작업 순서상 가장 먼저 진입)
+> Status: shipped (핵심 경로 MVP, 2026-04-29 머지)
+> Branch: feature/05-background-polling (머지됨)
+> Phase: 2
 > Depends on: 없음 (단, 06 스냅샷 spec과 한 짝으로 동작)
 
-> ⚠️ **작업 순서 메모**: 원래 Phase 2 인프라이지만 spec 01(캘린더 뷰)이 본 spec의 `lectureSnapshot`을 데이터 소스로 삼게 되어, **본 spec이 가장 먼저 머지되어야** 후속 spec 01을 코딩할 수 있다. 본 spec PR 머지 → spec 01 진입 순서 유지.
+> ✅ **MVP 머지 완료 (2026-04-29)**: alarm 등록 → SoMA list.do GET → offscreen DOMParser 파싱 → `lectureSnapshot` 저장 + 인증 만료 감지 + backoff(1m→5m→15m→60m→max-retry). spec 01 진입 가능.
+>
+> **후속 PR로 분리된 항목**:
+> - 옵션 UI (`pollingSettings.enabled` 토글·주기·범위·상태 표시·수동 폴링 버튼) — 묶음 E(U-05-1, U-05-2) 결정 후
+> - 라이브 fetch URL 쿼리스트링(D-05-2: `srchStrtDt` 등 키 미명시) — B-1 raw 캡처 후
+> - 라이브 환경 smoke test — 사용자 unpacked 로드 + service worker 콘솔에서 `chrome.storage.sync.set({pollingSettings:{enabled:true,...}})` + `chrome.runtime.sendMessage({type:'POLLING_TRIGGER_NOW'})` → `lectureSnapshot.lectures.length > 0` 확인
 
 ## 1. 목적
 
