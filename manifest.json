@@ -10,15 +10,14 @@
     "128": "icons/image.png"
   },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAj0pr1BGdZ/ylvSnPxRZ2jJOfIINEOn1yK2GXZ9COZrTCaTKlHDJd+Q+u+xzyeEJpsNLxjHjWVgZigu0A7IWmnSzNcrdoxaUKmQx/7acfuc9chMaZ60BGOks6ekbmxIWNo9dSfgWj1nmXyFbMfFjRm1kq9pWyFRzGqdlQxPBoz3SUZnLKz1wF+W95XVTPAcvaeXQk/dfgEjEIEff1wH7GrYWAjqLrrozW/emi7GlfpIMCVqyaH9JOxEoa84YLWm0zbaVns4/8pxWj3ox32EdqvyhZKSTusfZ8vNv3aQmWCpNBhW0zjsxTIB4SWMQ2jgrxcErY0zQlhKMXhjpjzYysCwIDAQAB",
-  "permissions": ["storage", "identity"],
+  "permissions": ["storage", "identity", "alarms", "offscreen"],
   "host_permissions": [
     "https://swmaestro.ai/*",
     "https://www.swmaestro.ai/*",
     "https://www.googleapis.com/*"
   ],
   "background": {
-    "service_worker": "src/background/service-worker.js",
-    "type": "module"
+    "service_worker": "src/background/service-worker.js"
   },
   "action": {
     "default_icon": {
