@@ -21,6 +21,7 @@
 ## 주의사항 — SoMA URL 쿼리스트링
 
 - `GET /sw/mypage/mentoLec/list.do`는 반드시 `?menuNo=200046` 쿼리스트링을 포함해야 한다. 누락 시 page-not-found 페이지로 리다이렉트되어 특강 목록이 비어진다. (spec 05 폴링, 2026-04-30 확정)
+- 폴링 시에는 `pageIndex` 순회 + `scdate`/`ecdate` 사용을 권장하여 전체 강의 목록을 수집한다. (B-10 페이지네이션, 2026-04-30 확정)
 
 ## SoMA 목업 범위
 

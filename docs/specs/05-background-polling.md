@@ -45,10 +45,12 @@
 1. 확장 설치/업데이트 시 `chrome.runtime.onInstalled`에서 alarm 등록.
 2. 옵션 페이지에서 사용자가 폴링 활성화 + 주기(분) + 조회 범위(예: 오늘+30일) 설정.
 3. 매 alarm fire마다 service worker가:
-   a. SWM 특강 목록 URL을 GET (날짜 범위 쿼리스트링 포함)
-   b. HTML 파싱 → lecture 배열
-   c. 배열을 `lectureSnapshot`에 저장 + `lastPolledAt` 업데이트
-   d. (spec 06) diff 계산 호출 (이벤트 publish)
+   a. SWM 특강 목록 URL을 GET (날짜 범위·페이지 쿼리스트링 포함)
+   b. `pageIndex=1`부터 시작해 순차적으로 페이지 폴링
+   c. 각 페이지 HTML 파싱 → lecture 배열에 누적
+   d. 빈 페이지 도착 또는 10 페이지 도달 시 폴링 중단
+   e. 누적 배열을 `lectureSnapshot`에 저장 + `lastPolledAt` 업데이트
+   f. (spec 06) diff 계산 호출 (이벤트 publish)
 4. 실패 시 backoff (예: 1m → 5m → 15m, 이후 1시간 간격으로 재시도). 연속 N회 실패 시 폴링 일시 정지 + 옵션 페이지 배너.
 
 ### 엣지 케이스
@@ -155,7 +157,25 @@ type LectureSnapshot = {
 - `@user` 인증 만료 시 자동 재인증 시도(보이지 않는 SWM 로그인 redirect 추적)를 할지, 사용자 안내만 할지. 후자가 안전.
 - `@tbd` content script가 페이지에서 직접 본 결과(=실시간)와 폴링 스냅샷(=주기적)이 충돌할 때 우선순위. 안에서 본 게 더 최신.
 
-## 13. 관련 링크
+## 13. 라이브 URL 정책 (확정, 2026-04-30)
+
+`GET /sw/mypage/mentoLec/list.do` 쿼리스트링:
+- `menuNo=200046` (필수, 누락 시 404 리다이렉트)
+- `scdate=YYYY-MM-DD` (조회 시작 날짜, 동적 생성: `scdate=today`)
+- `ecdate=YYYY-MM-DD` (조회 종료 날짜, 동적 생성: `ecdate=today+rangeDays`)
+- `pageIndex=N` (페이지 번호, 1부터 시작)
+
+## 14. 폴링 사이클 알고리즘 (확정, 2026-04-30)
+
+1. `scdate=today`, `ecdate=today+rangeDays` 계산 (rangeDays는 사용자 설정)
+2. `pageIndex=1`부터 시작
+3. 각 페이지 fetch + 파싱 + 결과 배열에 누적
+4. 빈 페이지 도착 또는 10 페이지 도달 시 루프 종료
+5. 누적 배열을 `lectureSnapshot` 저장
+
+이 메커니즘으로 특강 목록이 한 페이지(10개)만 반환되는 제약을 극복하고 전체 강의를 폴링할 수 있다.
+
+## 15. 관련 링크
 
 - 코드: `src/content/parsers.js` 목록 파서, `src/background/service-worker.js`
 - 외부: [chrome.alarms](https://developer.chrome.com/docs/extensions/reference/api/alarms)

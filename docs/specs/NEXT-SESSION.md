@@ -15,6 +15,10 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
+### 2026-04-30 spec 05 페이지네이션 fix (B-10 해소)
+
+**B-10 spec 05 페이지네이션 누락 fix** — `fix/spec-05-pagination` 작업 중. 라이브 회귀 원인: list.do 응답이 첫 페이지(10개)만 반환, 추가 페이지 폴링 미지원. 해결: `scdate=today`, `ecdate=today+rangeDays` 동적 생성 + `pageIndex=1`부터 순회 + 빈 페이지 또는 10 페이지 cap 시 stop. 문서 갱신(NEXT-SESSION·spec 05·runtime-env).
+
 ### 2026-04-30 spec 05 라이브 회귀 fix (menuNo=200046)
 
 **D-05-2 해소** — `fix/spec-05-list-url-menuno` 1 커밋: SoMA list.do가 querystring `?menuNo=200046` 없으면 page-not-found으로 redirect. `src/background/swm-fetch.js` LIST_URL에 쿼리스트링 추가. 회귀 테스트 추가.
@@ -203,6 +207,10 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 ### B-4 (선택) Chrome OS 알림 권한 동작 확인
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
+
+### B-10 ✅ 해소 (2026-04-30)
+
+**spec 05 페이지네이션 누락** — `fix/spec-05-pagination` 문서 갱신 작업. 원인: list.do 응답이 한 페이지(10개 강의)만 반환하여 전체 강의 미폴링. 해결: LIST_URL에 `scdate`, `ecdate`, `pageIndex` 쿼리 파라미터 지원. 동작: `scdate=today`, `ecdate=today+rangeDays` 동적 계산 → `pageIndex=1`부터 순회 → 빈 페이지 또는 10 페이지 도달 시 stop. 문서 세 개(NEXT-SESSION §1·§4·§9, spec 05 라이브 URL 정책·폴링 알고리즘, runtime-env 한 줄) 갱신 완료.
 
 ### B-9 ✅ 해소 (2026-04-30)
 
@@ -414,6 +422,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 9. 변경 이력
 
+- **2026-04-30 B-10 ✅ 해소**: spec 05 페이지네이션 누락 — `scdate`/`ecdate`/`pageIndex` 쿼리 지원으로 폴링 다중 페이지 순회. 문서 갱신 3건(NEXT-SESSION §1·§4·§9, spec 05 정책·알고리즘, runtime-env 한 줄).
 - **2026-04-30 D-05-2 ✅ 해소 + B-9 신규 해소**: spec 05 라이브 회귀 — list.do URL 쿼리스트링 `?menuNo=200046` 추가 필요. `fix/spec-05-list-url-menuno` 1 커밋 수정 + 회귀 테스트. §1 직전 세션·§4 B-1·B-9 항목 갱신.
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
 - 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 작업 순서 05 → 01로 변경. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
