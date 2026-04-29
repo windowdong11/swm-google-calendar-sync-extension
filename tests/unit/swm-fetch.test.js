@@ -29,6 +29,25 @@ test("isLoginPage returns false for the current site list fixture", () => {
   assert.equal(SwmFetch.isLoginPage(html), false);
 });
 
+test("LIST_URL contains menuNo=200046", () => {
+  assert.match(SwmFetch.LIST_URL, /menuNo=200046/);
+});
+
+test("fetchListHtml requests URL with menuNo=200046", async () => {
+  const calls = [];
+  const fakeFetch = async (url, opts) => {
+    calls.push({ url, opts });
+    return new Response("<html><body><div class=\"boardlist\"></div></body></html>", {
+      status: 200,
+      headers: { "Content-Type": "text/html" }
+    });
+  };
+
+  await SwmFetch.fetchListHtml({ fetchImpl: fakeFetch });
+
+  assert.match(calls[0].url, /menuNo=200046/);
+});
+
 test("fetchListHtml returns ok html on 200 response", async () => {
   const calls = [];
   const fakeFetch = async (url, opts) => {

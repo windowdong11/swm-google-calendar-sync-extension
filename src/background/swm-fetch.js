@@ -5,7 +5,8 @@
   }
   root.SomaSwmFetch = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
-  const LIST_URL = "https://www.swmaestro.ai/sw/mypage/mentoLec/list.do";
+  const MENU_NO = "200046";
+  const LIST_URL = `https://www.swmaestro.ai/sw/mypage/mentoLec/list.do?menuNo=${MENU_NO}`;
   const LOGIN_PATTERN = /id=["']login_form["']|name=["']username["']|<form[^>]+action=["'][^"']*toLogin\.do/i;
 
   function isLoginPage(html) {
