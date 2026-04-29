@@ -121,15 +121,16 @@
 ### Phase 1 — Visualization (보기 편하게)
 | ID | 제목 | 파일 | Status | 의존 |
 |---|---|---|---|---|
-| 01 | 캘린더 뷰 | [`01-calendar-view.md`](01-calendar-view.md) | draft | **05 선행 필수** |
+| 01 | 캘린더 뷰 | [`01-calendar-view.md`](01-calendar-view.md) | **shipped** (2026-04-29) | 05 |
 | 02 | 카테고리 분류 | [`02-category-classification.md`](02-category-classification.md) | draft | B-1 |
 | 03 | 멘토별 분류 | [`03-mentor-classification.md`](03-mentor-classification.md) | draft | B-1 |
 | 04 | 목록 필터링 | [`04-list-filtering.md`](04-list-filtering.md) | draft | 02·03 |
+| 11 | 자유 텍스트 검색 | [`11-text-search.md`](11-text-search.md) | draft | 04 (2026-04-30 분리) |
 
 ### Phase 2 — Infrastructure (수집·알림 인프라)
 | ID | 제목 | 파일 | Status | 의존 |
 |---|---|---|---|---|
-| 05 | 백그라운드 주기 폴링 | [`05-background-polling.md`](05-background-polling.md) | draft | B-3 |
+| 05 | 백그라운드 주기 폴링 | [`05-background-polling.md`](05-background-polling.md) | **shipped** (2026-04-29) | B-3 |
 | 06 | 특강 스냅샷·diff | [`06-lecture-snapshot-diff.md`](06-lecture-snapshot-diff.md) | draft | 05 |
 | ~~07~~ | ~~Chrome notification 통합~~ | [`07-chrome-notifications.md`](07-chrome-notifications.md) | **deprecated** (2026-04-29) | — |
 | 08 | 알림 큐 + Chrome notification 발송 | [`08-notification-queue.md`](08-notification-queue.md) | draft | 06 (07 책임 흡수) |

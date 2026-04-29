@@ -85,20 +85,16 @@
 
 [결정 완료 항목 §2 끝부분 참조] 6개 + spec 07 폐기까지 일괄 결정.
 
-### 묶음 B — Round 1 알림 정책 (3개, 🛑 차단, 정합성 위해 한 번에)
+### 묶음 B — ✅ 결정 완료 (2026-04-30)
 
-spec 08/09/10에 걸쳐 일관된 정책 필요. 따로 따로 결정하면 spec마다 멈춤.
+- [x] **U-08-1**: `상세로 이동` + `읽음` 2버튼 (Chrome notification 한도 + YAGNI). spec 08 §3·§12 반영.
+- [x] **U-09-1**: 멘토 칩 옆 + 그룹 헤더(spec 03) **둘 다**. action 우선. 구현 시 YAGNI 단계 도입(헤더 → 칩) 권장. spec 09 §3·§12 반영.
+- [x] **U-10-2**: 충돌 상태 특강 등록 시 **경고만, 등록 허용**. 파워 유저 자율성. spec 10 §12 반영.
 
-- [ ] **U-08-1** 큐 항목 액션 버튼 — 추천: 1차 `상세로 이동`·`읽음` 두 개. 후보 (Calendar 추가, 관심 해제, 카테고리 끄기)는 사용 후 추가
-- [ ] **U-09-1** 별표 토글 위치 — 추천: 멘토 칩 옆 + 멘토 그룹 헤더(spec 03) 둘 다
-- [ ] **U-10-2** 충돌 상태 특강 등록 시 차단 vs 경고 — 추천: 경고만 (사용자 자율)
+### 묶음 C — ✅ 결정 완료 (2026-04-30)
 
-### 묶음 C — Round 1 spec 진입 직전 (2개, 🛑 차단)
-
-spec 02·04 코딩 첫 단계 결정.
-
-- [ ] **U-02-2** 카테고리 매핑 편집 UI 위치 — 추천: 옵션 페이지 (편집 빈도 낮음)
-- [ ] **U-04-2** 텍스트 검색 spec 04 포함 vs 분리 — 추천: 별도 spec(예: `11-text-search.md`)으로 분리
+- [x] **U-02-2**: 카테고리 매핑 편집 UI는 **옵션 페이지**. 편집 빈도 낮음 전제. spec 02 §12 반영.
+- [x] **U-04-2**: 텍스트 검색은 **별도 spec 11로 분리**. CLAUDE.md "한 브랜치 = 한 spec" 규약. spec 04 §3·§12 반영, spec 11 stub 신설.
 
 ### 묶음 D — B-1 일부 해소 (2026-04-29, site-current fixture 분석)
 
@@ -172,6 +168,12 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 - **확정**: 정원(모집인원) = list.do 컬럼에 노출 ✓
 - **미확정**: 신청수(applyCnt) — list.do에는 컬럼 없음. 상세 페이지(`view.do`)에 `parseDetailLectureInfo`로 추출 (parsers.js L327 시그니처에 `appCnt`/`applyCnt` 보유) → 폴링이 각 상세 페이지를 추가 fetch 해야 함
 - **결정 필요**: spec 05·06에 "상세 페이지 추가 폴링 단계" 보강. 비용 평가(특강 N개 × 상세 fetch) — Round 2 spec 06 진입 시 결정
+- **자동 트리거**: spec 06 진입 시점에 `researcher` 에이전트 위임. **prompt 초안** (필요 시 그대로 launch):
+  ```
+  researcher (sonnet) — SOMA 폴링 신청수(applyCnt) 추가 fetch 비용 평가.
+  - 데이터: tests/fixtures/site-current/list.html에서 평균 list.do 응답 특강 수, 평균 행 크기. tests/fixtures/site-current/view.html(있다면)에서 상세 응답 크기. polling.js의 폴링 빈도(default 10분).
+  - 출력: (a) 일일 트래픽 추정(특강 수 × 폴링 빈도 × 상세 응답 크기), (b) service-worker CPU 영향, (c) 부분 폴링 전략 비교 — 신규/잔여 변동 가능 항목만 상세 fetch vs 전체 매 사이클. 각 전략의 trade-off + 추천. 800자 이내.
+  ```
 
 ### B-3 SWM 백그라운드 fetch 인증 검증 — 라이브 보류
 
@@ -379,3 +381,4 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - **2026-04-29 Round 0 머지 완료**: spec 05 핵심 경로 MVP(7 커밋, 55 테스트) + 비식별화 도구(`npm run refresh:fixtures`, 7 커밋, 24 테스트) 두 브랜치 main 머지. spec 05 `Status: shipped`. 묶음 D 일부 자동 해소(U-02-1·U-03-1 site-current fixture 분석으로 확정), B-1 부분 해소·B-2 정원 노출 확정. B-3 라이브 검증은 옵션 UI 후속 PR 시점으로 보류. 새 차단 항목 B-5(`content-scripts.test.js` 회귀) 추가. §1·§2(묶음 D·E)·§4(B-1·B-2·B-3·B-5)·§5(타임라인·라운드)·§6(권장 시퀀스 Round 1 진입) 갱신.
 - **2026-04-29 Round 1 진입**: B-5 ✅ 머지(b812215, fixture 시각 영구 미래화). spec 01 본문 사용자 결정 반영해 통째 재작성 — 캘린더 본체를 lectureSnapshot 직접 렌더에서 **Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 메시지 재사용)** 으로 전환, **사이드 패널에 lectureSnapshot 기반 미신청 특강 + 빈 영역 드래그 시 완전 포함 필터** UX 도입. T-01 해소, 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련. §1(직전 세션)·§2(묶음 D Spec 01 결정 항목 갱신)·§3(T-01 해소·T-01a/b 신설)·§4(B-5 해소)·§5.3(Round 1 진행 표) 갱신.
 - **2026-04-29 Round 1 머지 완료**: spec 01 calendar-view 11 commits → main 머지. coder(sonnet) 위임 → code-reviewer(sonnet) 사이클 → 5 fix(REV-1~5) 적용 → 108/108 pass. 신규 파일 9개(`src/calendar/*` 5개 + tests 2개 + mock 1개), 수정 4개(`manifest.json`, `service-worker.js`, `agent-guide.md` §3·§7, `01-calendar-view.md`). spec 01 `Status: shipped`. lecture-filter `additionalFilters` plug-in 슬롯이 spec 02·03·04 진입 시 시그니처 변경 없이 확장 가능. 라이브 환경 수동 검증은 사용자 백로그(B-3과 함께). §1·§5.3·§6(Round 2 진입 안내) 갱신.
+- **2026-04-30 묶음 B+C 결정 5개 완료**: 백로그 단계 1. recommender(sonnet) 백그라운드 추천 + general-purpose(sonnet) 라이브 검증 자동 점검 6/6 ✅. AskUserQuestion 2회로 사용자 결정 수집 — 5개 모두 추천 채택 (U-08-1 A·U-09-1 C·U-10-2 B·U-02-2 A·U-04-2 B). spec 02·04·08·09·10 §3·§12 결정 반영, **spec 11 (자유 텍스트 검색) stub 신설**, README Phase 인덱스에 spec 11 추가 + spec 01·05 shipped 표기. §2 묶음 B·C 결정 완료 항목으로 이동. Round 2 진입 시 spec 코딩 차단 결정 모두 해소.

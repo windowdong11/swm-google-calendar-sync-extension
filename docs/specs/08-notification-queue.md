@@ -180,7 +180,8 @@ type NotificationSettings = {
 
 ## 12. 미해결 질문
 
-- `@user` 큐 항목에 액션 버튼(`Google Calendar에 추가` 등) 추가할지. 현재 spec은 `상세로 이동` `읽음`만. (묶음 B U-08-1)
+- ✅ **U-08-1 결정 (2026-04-30)**: 1차 출시는 `상세로 이동` + `읽음` **2버튼만** 유지. Chrome notification 최대 2버튼 한도 + YAGNI. 사용 후 패턴 데이터로 `Calendar 추가` 등 확장 검토.
+- `@tbd` T-08: Windows 포커스 어시스트·DND 안내 문구 / 자리 알림과 신규 특강 알림 시각적 묶음 (팝업·옵션 UI 작성 시).
 - `@tbd` 신규 특강 그룹화(spec 09)와 자리 알림이 같은 lecture에 동시 발생 시 시각적으로 묶을지.
 - `@tbd` Windows 포커스 어시스트·DND 모드에서 알림이 silent로 처리되는 경우 사용자 안내.
 
