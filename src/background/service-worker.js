@@ -799,18 +799,20 @@ if (chrome.runtime?.onStartup?.addListener) {
   });
 }
 
-chrome.action.onClicked.addListener(async () => {
-  const calendarUrl = chrome.runtime.getURL("src/calendar/calendar.html");
-  const [existingTab] = await chrome.tabs.query({ url: calendarUrl });
-  if (existingTab) {
-    await chrome.tabs.update(existingTab.id, { active: true });
-    if (existingTab.windowId) {
-      await chrome.windows.update(existingTab.windowId, { focused: true });
+if (chrome.action?.onClicked?.addListener) {
+  chrome.action.onClicked.addListener(async () => {
+    const calendarUrl = chrome.runtime.getURL("src/calendar/calendar.html");
+    const [existingTab] = await chrome.tabs.query({ url: calendarUrl });
+    if (existingTab) {
+      await chrome.tabs.update(existingTab.id, { active: true });
+      if (existingTab.windowId) {
+        await chrome.windows.update(existingTab.windowId, { focused: true });
+      }
+    } else {
+      await chrome.tabs.create({ url: calendarUrl });
     }
-  } else {
-    await chrome.tabs.create({ url: calendarUrl });
-  }
-});
+  });
+}
 
 if (chrome.alarms?.onAlarm?.addListener) {
   chrome.alarms.onAlarm.addListener(async (alarm) => {
