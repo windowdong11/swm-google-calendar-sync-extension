@@ -8,6 +8,7 @@
   const ALARM_KEY = "soma-polling";
   const MAX_BACKOFF_FAILURES = 5;
   const BACKOFF_SEQUENCE_MINUTES = [1, 5, 15, 60, 60];
+  const MAX_PAGES = 10;
 
   const DEFAULT_POLLING_SETTINGS = {
     enabled: false,
@@ -122,51 +123,68 @@
     const polledAt = polledAtDate.toISOString();
     const { rangeStart, rangeEnd } = computeRangeIsoDates(polledAtDate, settings.rangeDays);
 
-    const fetchResult = await fetchListHtml({ rangeDays: settings.rangeDays });
+    const allLectures = [];
+    for (let pageIndex = 1; pageIndex <= MAX_PAGES; pageIndex++) {
+      const fetchResult = await fetchListHtml({
+        scdate: rangeStart,
+        ecdate: rangeEnd,
+        pageIndex,
+        rangeDays: settings.rangeDays
+      });
 
-    if (fetchResult.ok && fetchResult.html) {
+      if (!fetchResult.ok) {
+        if (fetchResult.authExpired) {
+          await writeState(chromeApi, {
+            ...state,
+            lastPolledAt: polledAt,
+            lastError: { code: "auth-expired", message: "SWM 로그인 만료", at: polledAt },
+            pausedReason: "auth-expired"
+          });
+          await clearAlarm(chromeApi);
+          return { ok: false, error: "auth-expired" };
+        }
+        return await applyFailure(chromeApi, settings, state, polledAt, {
+          code: "fetch-failed",
+          message: fetchResult.error || "fetch failed"
+        });
+      }
+
+      let pageLectures;
       try {
         const parsed = await parseInOffscreen(fetchResult.html);
-        const lectures = Array.isArray(parsed?.lectures) ? parsed.lectures : [];
-        const snapshot = {
-          takenAt: polledAt,
-          rangeStart,
-          rangeEnd,
-          lectures
-        };
-        await chromeApi.storage.local.set({ lectureSnapshot: snapshot });
-        await writeState(chromeApi, {
-          ...state,
-          lastPolledAt: polledAt,
-          lastSuccessAt: polledAt,
-          lastError: null,
-          consecutiveFailures: 0,
-          pausedReason: null
-        });
-        return { ok: true, lectureCount: lectures.length };
+        pageLectures = Array.isArray(parsed?.lectures) ? parsed.lectures : [];
       } catch (err) {
         return await applyFailure(chromeApi, settings, state, polledAt, {
           code: "parse-failed",
           message: err instanceof Error ? err.message : String(err)
         });
       }
+
+      if (pageLectures.length === 0) break;
+      allLectures.push(...pageLectures);
+
+      if (pageIndex === MAX_PAGES) {
+        console.warn("[polling] reached MAX_PAGES cap, stopping pagination");
+        break;
+      }
     }
 
-    if (!fetchResult.ok && fetchResult.authExpired) {
-      await writeState(chromeApi, {
-        ...state,
-        lastPolledAt: polledAt,
-        lastError: { code: "auth-expired", message: "SWM 로그인 만료", at: polledAt },
-        pausedReason: "auth-expired"
-      });
-      await clearAlarm(chromeApi);
-      return { ok: false, error: "auth-expired" };
-    }
-
-    return await applyFailure(chromeApi, settings, state, polledAt, {
-      code: "fetch-failed",
-      message: fetchResult.error || "fetch failed"
+    const snapshot = {
+      takenAt: polledAt,
+      rangeStart,
+      rangeEnd,
+      lectures: allLectures
+    };
+    await chromeApi.storage.local.set({ lectureSnapshot: snapshot });
+    await writeState(chromeApi, {
+      ...state,
+      lastPolledAt: polledAt,
+      lastSuccessAt: polledAt,
+      lastError: null,
+      consecutiveFailures: 0,
+      pausedReason: null
     });
+    return { ok: true, lectureCount: allLectures.length };
   }
 
   async function applyFailure(chromeApi, settings, state, polledAt, errorPayload) {
@@ -216,6 +234,7 @@
   return {
     ALARM_KEY,
     MAX_BACKOFF_FAILURES,
+    MAX_PAGES,
     DEFAULT_POLLING_SETTINGS,
     DEFAULT_POLLING_STATE,
     nextBackoffMinutes,

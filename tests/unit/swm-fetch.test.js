@@ -33,6 +33,26 @@ test("LIST_URL contains menuNo=200046", () => {
   assert.match(SwmFetch.LIST_URL, /menuNo=200046/);
 });
 
+test("buildListUrl includes menuNo, scdate, ecdate, pageIndex", () => {
+  const url = SwmFetch.buildListUrl({ scdate: "2026-01-01", ecdate: "2026-12-31", pageIndex: 3 });
+  assert.match(url, /menuNo=200046/);
+  assert.match(url, /scdate=2026-01-01/);
+  assert.match(url, /ecdate=2026-12-31/);
+  assert.match(url, /pageIndex=3/);
+});
+
+test("buildListUrl omits pageIndex param when pageIndex is 1", () => {
+  const url = SwmFetch.buildListUrl({ scdate: "2026-01-01", ecdate: "2026-12-31", pageIndex: 1 });
+  assert.doesNotMatch(url, /pageIndex/);
+});
+
+test("buildListUrl omits scdate/ecdate when not provided", () => {
+  const url = SwmFetch.buildListUrl({});
+  assert.doesNotMatch(url, /scdate/);
+  assert.doesNotMatch(url, /ecdate/);
+  assert.match(url, /menuNo=200046/);
+});
+
 test("fetchListHtml requests URL with menuNo=200046", async () => {
   const calls = [];
   const fakeFetch = async (url, opts) => {
@@ -113,4 +133,21 @@ test("fetchListHtml returns error on 500 server response", async () => {
   assert.equal(result.ok, false);
   assert.equal(result.authExpired, undefined);
   assert.match(result.error, /500/);
+});
+
+test("fetchListHtml passes scdate, ecdate, pageIndex into requested URL", async () => {
+  const calls = [];
+  const fakeFetch = async (url, opts) => {
+    calls.push({ url, opts });
+    return new Response("<html><body><div class=\"boardlist\"></div></body></html>", {
+      status: 200,
+      headers: { "Content-Type": "text/html" }
+    });
+  };
+
+  await SwmFetch.fetchListHtml({ scdate: "2026-01-01", ecdate: "2026-12-31", pageIndex: 2, fetchImpl: fakeFetch });
+
+  assert.match(calls[0].url, /scdate=2026-01-01/);
+  assert.match(calls[0].url, /ecdate=2026-12-31/);
+  assert.match(calls[0].url, /pageIndex=2/);
 });

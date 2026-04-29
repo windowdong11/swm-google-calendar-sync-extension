@@ -134,9 +134,13 @@ test("handleAlarmFire on success stores snapshot and resets failures", async () 
   });
 
   const lectures = [{ id: "1", title: "ok", startAt: "2026-04-30T10:00:00+09:00", endAt: "2026-04-30T12:00:00+09:00" }];
+  let parseCallCount = 0;
   const deps = {
     fetchListHtml: async () => ({ ok: true, html: "<html></html>" }),
-    parseInOffscreen: async () => ({ lectures }),
+    parseInOffscreen: async () => {
+      parseCallCount += 1;
+      return { lectures: parseCallCount === 1 ? lectures : [] };
+    },
     now: () => new Date("2026-04-29T08:00:00.000Z")
   };
 
@@ -396,4 +400,95 @@ test("handleAlarmFire honors rangeDays=7 for rangeEnd ISO date", async () => {
   const snapshot = store.local.lectureSnapshot;
   assert.equal(snapshot.rangeStart, "2026-04-29");
   assert.equal(snapshot.rangeEnd, "2026-05-06");
+});
+
+test("handleAlarmFire fetches pages 1,2,3 then stops on empty page 4", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  const fetchedPageIndexes = [];
+  let parseCallCount = 0;
+  const pageData = [
+    [{ id: "1", title: "A" }],
+    [{ id: "2", title: "B" }],
+    [{ id: "3", title: "C" }],
+    []
+  ];
+
+  const result = await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async ({ pageIndex }) => {
+      fetchedPageIndexes.push(pageIndex);
+      return { ok: true, html: "<html></html>" };
+    },
+    parseInOffscreen: async () => {
+      const data = pageData[parseCallCount] || [];
+      parseCallCount += 1;
+      return { lectures: data };
+    },
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.deepEqual(fetchedPageIndexes, [1, 2, 3, 4]);
+  assert.equal(result.ok, true);
+  assert.equal(result.lectureCount, 3);
+  assert.equal(store.local.lectureSnapshot.lectures.length, 3);
+});
+
+test("handleAlarmFire passes scdate and ecdate derived from rangeStart/rangeEnd to fetchListHtml", async () => {
+  const { chrome } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  const fetchCalls = [];
+  let parseCallCount = 0;
+
+  await Polling.handleAlarmFire(chrome, {
+    fetchListHtml: async (opts) => {
+      fetchCalls.push({ scdate: opts.scdate, ecdate: opts.ecdate, pageIndex: opts.pageIndex });
+      return { ok: true, html: "<html></html>" };
+    },
+    parseInOffscreen: async () => {
+      parseCallCount += 1;
+      return { lectures: parseCallCount === 1 ? [{ id: "x" }] : [] };
+    },
+    now: () => new Date("2026-04-29T08:00:00.000Z")
+  });
+
+  assert.equal(fetchCalls[0].scdate, "2026-04-29");
+  assert.equal(fetchCalls[0].ecdate, "2026-05-29");
+  assert.equal(fetchCalls[0].pageIndex, 1);
+  assert.equal(fetchCalls[1].pageIndex, 2);
+});
+
+test("handleAlarmFire stops at MAX_PAGES cap and warns", async () => {
+  const { chrome, store } = makeChromeMock({
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingState: { ...Polling.DEFAULT_POLLING_STATE }
+  });
+
+  const warnings = [];
+  const origWarn = console.warn;
+  console.warn = (...args) => warnings.push(args.join(" "));
+
+  const fetchedCount = { value: 0 };
+  try {
+    const result = await Polling.handleAlarmFire(chrome, {
+      fetchListHtml: async ({ pageIndex }) => {
+        fetchedCount.value = pageIndex;
+        return { ok: true, html: "<html></html>" };
+      },
+      parseInOffscreen: async () => ({ lectures: [{ id: String(fetchedCount.value) }] }),
+      now: () => new Date("2026-04-29T08:00:00.000Z")
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.lectureCount, Polling.MAX_PAGES);
+    assert.equal(fetchedCount.value, Polling.MAX_PAGES);
+    assert.ok(warnings.some((w) => /MAX_PAGES/.test(w)), "should warn about MAX_PAGES cap");
+  } finally {
+    console.warn = origWarn;
+  }
 });

@@ -9,6 +9,14 @@
   const LIST_URL = `https://www.swmaestro.ai/sw/mypage/mentoLec/list.do?menuNo=${MENU_NO}`;
   const LOGIN_PATTERN = /id=["']login_form["']|name=["']username["']|<form[^>]+action=["'][^"']*toLogin\.do/i;
 
+  function buildListUrl({ scdate, ecdate, pageIndex } = {}) {
+    let url = LIST_URL;
+    if (scdate) url += `&scdate=${encodeURIComponent(scdate)}`;
+    if (ecdate) url += `&ecdate=${encodeURIComponent(ecdate)}`;
+    if (pageIndex && pageIndex > 1) url += `&pageIndex=${encodeURIComponent(pageIndex)}`;
+    return url;
+  }
+
   function isLoginPage(html) {
     if (typeof html !== "string" || !html) return false;
     return LOGIN_PATTERN.test(html);
@@ -30,15 +38,19 @@
       return { ok: false, error: "fetch is not available in this environment" };
     }
 
+    const url = buildListUrl({
+      scdate: options.scdate,
+      ecdate: options.ecdate,
+      pageIndex: options.pageIndex
+    });
+
     let response;
     try {
-      response = await fetchImpl(LIST_URL, {
+      response = await fetchImpl(url, {
         method: "GET",
         credentials: "include",
         redirect: "manual",
-        headers: {
-          Accept: "text/html,application/xhtml+xml"
-        }
+        headers: { Accept: "text/html,application/xhtml+xml" }
       });
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) };
@@ -68,6 +80,7 @@
 
   return {
     LIST_URL,
+    buildListUrl,
     isLoginPage,
     fetchListHtml
   };
