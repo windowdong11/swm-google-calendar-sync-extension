@@ -1,6 +1,6 @@
 # Spec 01: 캘린더 뷰 — Google Calendar 본체 + 사이드 패널 특강 탐색
 
-> Status: in-progress
+> Status: shipped
 > Branch: feature/01-calendar-view
 > Phase: 1
 > Depends on: **05 (background-polling) — 선행 머지 필수**. 사이드 패널이 폴링 결과 `lectureSnapshot`을 데이터 소스로 소비한다. 캘린더 본체는 service-worker의 기존 `GET_CALENDAR_EVENTS` 메시지(Google Calendar API)를 사용한다.
@@ -215,9 +215,9 @@ type CalendarEvent = {
 ## 12. 미해결 질문
 
 - ✅ U-01-1·U-01-2·D-3·T-01 모두 본 결정으로 해소 (2026-04-29 묶음 D 사용자 확정).
-- `@tbd` Google Calendar fetch 실패 시 fallback — 단순 안내(현 spec) vs 자동 재시도. 코딩 시점 결정.
-- `@tbd` 드래그 영역이 시간축 외(예: 02:00~05:00)일 때 처리 — UI에서 드래그 영역을 시간축 내(08:00~24:00)로 clamp 권장. 코딩 시점 결정.
-- `@tbd` `calendarAnchorDate`가 `lectureSnapshot.rangeStart/rangeEnd` 범위를 벗어났을 때 사이드 패널 동작 — 빈 결과만 보일지, 폴링에 범위 확장 요청을 보낼지. 후자라면 spec 05에 `POLLING_TRIGGER_NOW` payload(범위)를 추가해야 함.
+- ✅ T-01a 결정: Google Calendar fetch 실패 시 단순 안내 (재시도 없음). `service-worker.js`의 `GET_CALENDAR_EVENTS` 핸들러는 `{ok:false, error}` 응답을 주고, calendar.js는 본체 영역에 안내 문구를 띄운다.
+- ✅ T-01b 결정: 드래그 영역을 시간축 내(`WEEK_START_HOUR`~`WEEK_END_HOUR`)로 clamp. `calendar.js:getDragTimeFromY`에서 `Math.min/Math.max` 처리.
+- 잔여 `@tbd`: `calendarAnchorDate`가 `lectureSnapshot.rangeStart/rangeEnd` 범위를 벗어났을 때 사이드 패널 동작 — 현재는 빈 결과만 표시. 폴링에 범위 확장 요청을 보내려면 spec 05에 `POLLING_TRIGGER_NOW` payload(범위)를 추가해야 함. **Round 2 spec 06 진입 시 비용 재평가**.
 
 ## 13. 관련 링크
 

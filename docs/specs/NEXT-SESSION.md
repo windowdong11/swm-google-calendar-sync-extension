@@ -15,18 +15,32 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
-### 2026-04-29 Round 1 진입 (B-5 fix + spec 01 재설계)
+### 2026-04-29 Round 1 머지 완료 (B-5 fix + spec 01)
 
-**B-5 회귀 fix**
-- `fix/content-scripts-test-regression` 1 커밋(b812215) → main 머지
-- `example/soma-cancelschedule.html` 강의 시각 `2026.04.30` → `2099.04.30` (시계 흐름 무관). history fixture(`2099-05-10`) 패턴 일관 적용.
-- main HEAD `npm test` 79/79 pass
+**B-5 회귀 fix** — `fix/content-scripts-test-regression` 1 커밋(b812215) → main. fixture 강의 시각 영구 미래화. `npm test` 79/79.
 
-**spec 01 본문 재설계 (사용자 결정 반영)**
-- 본래 D-3: lectureSnapshot의 모든 SoMA 특강을 캘린더 그리드에 직접 렌더
-- 변경 후: **캘린더 본체 = Google Calendar 이벤트만** (`GET_CALENDAR_EVENTS` 메시지 재사용, SoMA 신청 특강은 OAuth가 이미 Calendar에 삽입), **사이드 패널 = lectureSnapshot 기반 미신청 특강** (기본 `endAt < now` 제외 + 빈 영역 드래그 시 완전 포함 필터)
-- T-01 해소(셀 충돌 패널 폐기), 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련
-- 다음 단계: 사용자 본문 confirm 후 코딩 진입
+**spec 01 calendar-view (11 commits)** — `feature/01-calendar-view` → main:
+- `4a2b571` docs(specs): redesign spec 01
+- `6c71970` feat(calendar): add calendar.html shell + chrome.action.onClicked open handler
+- `30f6ee2` feat(calendar): render Google Calendar events into week/month grid
+- `2bcb5ab` test(calendar): cover lecture-filter and calendar-view edge cases
+- `b20772c` feat(calendar): side panel filters lectureSnapshot, mock fixture, agent-guide updated
+- `60840f2` fix(service-worker): guard chrome.action.onClicked listener for vm test environment
+- `f00b11c` refactor(calendar): replace ESM exports with CJS for browser+test compatibility
+- `146e5fa` docs(specs): polish wording
+- `569475a` fix(calendar): refresh side panel on navigate, share view-hour constants, guard chrome.windows.update
+- `81a34bb` feat(filter): expose plug-in slot for future spec 02/03/04 filters
+- `a271705` docs: list calendar and polling messages in agent-guide §7
+
+**핵심 결과물**:
+- 캘린더 본체 = Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 재사용, 신규 메시지 없음). SoMA 신청 특강은 OAuth가 이미 삽입.
+- 사이드 패널 = lectureSnapshot 미신청 특강(`endAt < now` 제외 + 빈 영역 드래그 시 완전 포함 필터).
+- `lecture-filter.js` plug-in 슬롯(`additionalFilters`)이 spec 02·03·04 진입 시 시그니처 변경 없이 확장 가능.
+- 신규: `src/calendar/{html,css,calendar.js,calendar-view.js,lecture-filter.js}`, `tests/unit/{calendar-view,lecture-filter}.test.js`, `mock/calendar.html`.
+- 수정: `manifest.json` (action·default_title), `service-worker.js` (chrome.action.onClicked 핸들러), `agent-guide.md` (§3·§7).
+- 29 신규 테스트, `npm test` 108/108 pass.
+
+**라이브 환경 미검증** (사용자 직접 처리 권장): unpacked Chrome 확장에서 (a) 아이콘 클릭 → 새 탭, (b) Google Calendar 이벤트 시간축 표시, (c) 빈 영역 드래그 → 사이드 패널 필터, (d) 카드 클릭 → SoMA 상세 진입 직접 확인. spec 05 폴링 라이브 검증(B-3)과 같은 시점에 처리 권장.
 
 ### 2026-04-29 Round 0 머지 완료
 
@@ -215,16 +229,14 @@ B-1 ─── 02 (category) ──┐
 | Claude | 비식별화 도구 (`npm run refresh:fixtures`) | ✅ 머지됨 (7 커밋) |
 | 자동 분석 | B-1 부분 해소 (site-current fixture) | ✅ U-02-1·U-03-1 확정, B-2 정원 노출 확정 |
 
-### 5.3 Round 1 — 진행 중 (2026-04-29 시작)
+### 5.3 Round 1 — ✅ 완료 (2026-04-29)
 
-| 트랙 | 작업 | 상태 |
+| 트랙 | 작업 | 결과 |
 |---|---|---|
-| Claude | B-5 회귀 fix (`fix/content-scripts-test-regression`) | ✅ 머지(b812215). main HEAD 79/79 pass |
-| Claude | spec 01 본문 재작성 (Google Calendar 본체 + 사이드 패널 드래그 필터) | ✅ 작성, 사용자 confirm 대기 후 코딩 진입 |
-| Claude | spec 01 코딩 (`feature/01-calendar-view`) | 🟡 진입 예정 (본 본문 confirm 후) |
-| 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | — (병행) |
-
-> spec 01의 핵심 의도가 사용자 결정으로 전환됨(Google Calendar 본체 + 사이드 패널 드래그 필터). 묶음 D 결정 완료 항목 참조. 사용자는 spec 01 코딩 진행 중 묶음 B·C 결정 모아 처리.
+| Claude | B-5 회귀 fix (`fix/content-scripts-test-regression`) | ✅ 머지(b812215). 79/79 pass |
+| Claude | spec 01 본문 재작성 + 코딩 (`feature/01-calendar-view`) | ✅ 11 commits 머지. spec 01 `Status: shipped`. 108/108 pass |
+| 사용자 | spec 01 라이브 환경 수동 검증 | 🟡 미수행 (B-3 검증과 같은 시점 권장) |
+| 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | 🟡 미수행 (Round 2 진입 전 필수) |
 
 ### 5.4 Round 2 — 두 트랙 병렬 (B-1 캡처 도착 가정)
 
@@ -284,25 +296,26 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 6. 권장 다음 세션 시작 시퀀스
 
-진입 지점: **Round 1 — spec 01 calendar-view**. spec 05는 머지됐고 사용자 결정 의존성 없음.
+진입 지점: **Round 2 — spec 06·08 (Track A) 또는 spec 02·03·04 (Track B)**. spec 05·01 머지됨.
 
 ### 권장 순서
 
-1. **세션 시작 시 한 줄 보고** — 메인이 `git log --oneline main -10`으로 직전 머지 확인 (spec 05·chore 두 머지 커밋 보일 것). 이 NEXT-SESSION.md 읽고 작업 자동 진입.
+1. **세션 시작 시 한 줄 보고** — 메인이 `git log --oneline main -15`로 직전 머지 확인 (spec 01 11 commits + B-5 fix가 보일 것). 본 NEXT-SESSION.md 읽고 작업 자동 진입.
 
-2. **(선택) B-5 회귀 fix** — `tests/unit/content-scripts.test.js`의 `detail cancel intercepts SoMA cancel success...` 1건 timeout fix. 단발 30분 이내. 별도 브랜치 `fix/content-scripts-test-regression`로 컷.
-   - main HEAD에서 `npm test` 실행 → fail 재현 확인 → 원인 분석 → 단일 fix 커밋 → 머지
-   - spec 01 진입 전에 정리하면 회귀 감지 베이스라인 깨끗
+2. **사용자 라이브 검증 (백로그)**: spec 01 unpacked 확장 수동 4 케이스 (§1 라이브 환경 미검증 항목) + spec 05 폴링 라이브(B-3) 한 세션에 묶어 처리. 30분 내. 결과를 NEXT-SESSION에 적어 다음 라운드 신뢰도 확보.
 
-3. **Round 1 진입 — spec 01 calendar-view**:
-   - `feature/01-calendar-view` 브랜치 생성
-   - 코어: 새 `calendar.html` + `chrome.action.onClicked` 핸들러로 새 탭 진입(U-01-1) + 시간축 08:00–24:00 그리드(U-01-2) + `chrome.storage.local.lectureSnapshot` 구독 + mock fixture 추가
-   - `code-delegate` 스킬로 coder + code-reviewer 위임 (§7 참조)
-   - PR/머지 → spec 01 `Status: shipped`로 갱신
+3. **사용자 결정 처리 (Round 2 진입 전 필수)**:
+   - 묶음 B: U-08-1, U-09-1, U-10-2 (알림 정책 3개)
+   - 묶음 C: U-02-2, U-04-2 (spec 02·04 진입 직전 2개)
+   - B-2: 신청수 폴링 비용 결정 (Round 2 spec 06 진입 시)
 
-4. **사용자 결정 수집 (병행)**: 묶음 B(3)·묶음 C(2)을 spec 01 작업 중 모아 처리. 다음 라운드 Track A·B 진입 전에 모두 결정.
+4. **Round 2 — Track A 우선 (권장)**: spec 06 → spec 08 한 흐름.
+   - `feature/06-lecture-snapshot-diff` → `code-delegate` 위임
+   - 머지 후 `feature/08-notification-queue` → `code-delegate` 위임 (07 폐기, 책임 흡수)
 
-5. **Round 2 진입 준비**: spec 06·08 → spec 02·03·04 (Track A·B 독립). 묶음 B 결정 + B-2 신청수 폴링 전략 결정 완료 시점.
+5. **Round 2 — Track B (Track A 머지 후 또는 worktree 병렬)**: spec 02 → spec 03 → spec 04. parsers.js 충돌 위험으로 02·03 순차 권장.
+
+6. **Round 3 — Phase 3**: spec 09 ∥ spec 10 (코드 영역 다름 → 동시 진행). spec 05 옵션 UI 후속 PR도 이때 묶어 처리.
 
 ### 파워유저 흐름 (spec 01 진입 직후 한 메시지로)
 
@@ -365,3 +378,4 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - 2026-04-29: 묶음 A 결정 완료 + **spec 07 폐기**. spec 04·06·07·08·09·10 본문 동기화.
 - **2026-04-29 Round 0 머지 완료**: spec 05 핵심 경로 MVP(7 커밋, 55 테스트) + 비식별화 도구(`npm run refresh:fixtures`, 7 커밋, 24 테스트) 두 브랜치 main 머지. spec 05 `Status: shipped`. 묶음 D 일부 자동 해소(U-02-1·U-03-1 site-current fixture 분석으로 확정), B-1 부분 해소·B-2 정원 노출 확정. B-3 라이브 검증은 옵션 UI 후속 PR 시점으로 보류. 새 차단 항목 B-5(`content-scripts.test.js` 회귀) 추가. §1·§2(묶음 D·E)·§4(B-1·B-2·B-3·B-5)·§5(타임라인·라운드)·§6(권장 시퀀스 Round 1 진입) 갱신.
 - **2026-04-29 Round 1 진입**: B-5 ✅ 머지(b812215, fixture 시각 영구 미래화). spec 01 본문 사용자 결정 반영해 통째 재작성 — 캘린더 본체를 lectureSnapshot 직접 렌더에서 **Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 메시지 재사용)** 으로 전환, **사이드 패널에 lectureSnapshot 기반 미신청 특강 + 빈 영역 드래그 시 완전 포함 필터** UX 도입. T-01 해소, 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련. §1(직전 세션)·§2(묶음 D Spec 01 결정 항목 갱신)·§3(T-01 해소·T-01a/b 신설)·§4(B-5 해소)·§5.3(Round 1 진행 표) 갱신.
+- **2026-04-29 Round 1 머지 완료**: spec 01 calendar-view 11 commits → main 머지. coder(sonnet) 위임 → code-reviewer(sonnet) 사이클 → 5 fix(REV-1~5) 적용 → 108/108 pass. 신규 파일 9개(`src/calendar/*` 5개 + tests 2개 + mock 1개), 수정 4개(`manifest.json`, `service-worker.js`, `agent-guide.md` §3·§7, `01-calendar-view.md`). spec 01 `Status: shipped`. lecture-filter `additionalFilters` plug-in 슬롯이 spec 02·03·04 진입 시 시그니처 변경 없이 확장 가능. 라이브 환경 수동 검증은 사용자 백로그(B-3과 함께). §1·§5.3·§6(Round 2 진입 안내) 갱신.
