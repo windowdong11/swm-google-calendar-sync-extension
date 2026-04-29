@@ -169,6 +169,42 @@ test("CLI exits with code 1 on unknown option", () => {
   assert.match(result.stderr, /Unknown option/);
 });
 
+test("preserves SoMA UI label '비식별 값' (whitelisted compound)", () => {
+  const input = `<td class="pc_only">비식별 값</td>`;
+  const out = anonymizeHtml(input);
+  assert.equal(out, input);
+});
+
+test("preserves SoMA UI label '[현재사이트]' (whitelisted compound)", () => {
+  const input = `<a>[현재사이트]</a>`;
+  const out = anonymizeHtml(input);
+  assert.equal(out, input);
+});
+
+test("preserves SoMA UI label '강의날짜 :' (whitelisted compound)", () => {
+  const input = `<span>강의날짜 : 2026-04-12</span>`;
+  const out = anonymizeHtml(input);
+  assert.equal(out, input);
+});
+
+test("preserves SoMA UI label '접수인원 : 50명' (whitelisted compound)", () => {
+  const input = `<span>접수인원 : 50명</span>`;
+  const out = anonymizeHtml(input);
+  assert.equal(out, input);
+});
+
+test("idempotent on real fixtures (list, detail, history)", async () => {
+  const fs = require("node:fs");
+  for (const f of ["list.html", "detail.html", "history.html"]) {
+    const p = path.resolve(__dirname, "../fixtures/site-current", f);
+    const orig = fs.readFileSync(p, "utf8");
+    const r1 = anonymizeHtml(orig);
+    const r2 = anonymizeHtml(r1);
+    assert.equal(r1, r2, `${f} idempotent failed`);
+    assert.equal(orig, r1, `${f} fixturePreserved failed`);
+  }
+});
+
 test("placeholder appearing in raw stays untouched and is not remapped", () => {
   // raw "홍길동" coincides with a placeholder. Policy: preserve as-is so a
   // second masking pass does not re-shuffle placeholders.
