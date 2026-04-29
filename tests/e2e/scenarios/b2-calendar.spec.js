@@ -46,7 +46,7 @@ test.describe("B-2 calendar renders 08-24 axis with events", () => {
   //
   // events 빈 배열에서는 for 루프가 skip되어 그리드가 정상 렌더되므로
   // B-3·B-4는 통과한다. spec 01 fix(별도 후속 PR) 후 .skip 제거.
-  test.skip("renders hour labels 08:00 and 23:00 with mock event block — blocked by spec 01 regression", async () => {
+  test("renders hour labels 08:00 and 23:00 with mock event block — blocked by spec 01 regression", async () => {
     handle = await launch();
     await stubIdentity(handle.ctx);
 

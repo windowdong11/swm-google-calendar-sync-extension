@@ -60,7 +60,7 @@ test.describe("B-1 toolbar action opens calendar tab", () => {
   // url 필드가 항상 빈 값으로 채워진다. 결과: dedupe가 실패하고 매번 새 탭이 열림.
   // 수정 방향: manifest.json permissions에 "tabs" 추가 또는
   // `chrome.tabs.query` 대신 chrome.storage 기반 tab id 추적.
-  test.skip("second click reuses existing calendar tab — blocked by spec 01 regression", async () => {
+  test("second click reuses existing calendar tab — blocked by spec 01 regression", async () => {
     handle = await launch();
     await stubIdentity(handle.ctx);
     await routeGoogle(handle.ctx, { events: { kind: "calendar#events", items: [] } });
