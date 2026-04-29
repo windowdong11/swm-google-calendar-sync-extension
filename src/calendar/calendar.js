@@ -173,6 +173,7 @@
     await chrome.storage.local.set({ calendarAnchorDate: anchorDate.toISOString() });
     await fetchCalendarEvents();
     renderGrid();
+    updateSidePanel();
   }
 
   async function refresh() {
@@ -196,9 +197,11 @@
   function getDragTimeFromY(colEl, y) {
     const rect = colEl.getBoundingClientRect();
     const relY = Math.max(0, Math.min(y - rect.top, rect.height));
-    const totalHours = 16; // WEEK_END_HOUR(24) - WEEK_START_HOUR(8)
-    const rawHour = (relY / rect.height) * totalHours + 8;
-    const clampedHour = Math.min(24, Math.max(8, rawHour));
+    const startHour = window.CalendarView.WEEK_START_HOUR;
+    const endHour = window.CalendarView.WEEK_END_HOUR;
+    const totalHours = endHour - startHour;
+    const rawHour = (relY / rect.height) * totalHours + startHour;
+    const clampedHour = Math.min(endHour, Math.max(startHour, rawHour));
     const hour = Math.floor(clampedHour);
     const minutes = Math.round((clampedHour - hour) * 60);
     return { hour, minutes };
@@ -219,13 +222,15 @@
     if (!dragOverlayEl || !dragState) return;
     const colEl = dragState.colEl;
     const rect = colEl.getBoundingClientRect();
-    const totalHours = 16;
+    const startHour = window.CalendarView.WEEK_START_HOUR;
+    const endHour = window.CalendarView.WEEK_END_HOUR;
+    const totalHours = endHour - startHour;
     const pixPerHour = rect.height / totalHours;
 
     const rawStartH = dragState.startHour + dragState.startMin / 60;
     const rawEndH = dragState.endHour + dragState.endMin / 60;
-    const topH = Math.min(rawStartH, rawEndH) - 8;
-    const botH = Math.max(rawStartH, rawEndH) - 8;
+    const topH = Math.min(rawStartH, rawEndH) - startHour;
+    const botH = Math.max(rawStartH, rawEndH) - startHour;
 
     dragOverlayEl.style.top = topH * pixPerHour + "px";
     dragOverlayEl.style.height = Math.max(1, (botH - topH) * pixPerHour) + "px";

@@ -805,8 +805,13 @@ if (chrome.action?.onClicked?.addListener) {
     const [existingTab] = await chrome.tabs.query({ url: calendarUrl });
     if (existingTab) {
       await chrome.tabs.update(existingTab.id, { active: true });
-      if (existingTab.windowId) {
-        await chrome.windows.update(existingTab.windowId, { focused: true });
+      if (existingTab.windowId && chrome.windows?.update) {
+        try {
+          await chrome.windows.update(existingTab.windowId, { focused: true });
+        } catch {
+          // windows API requires no manifest permission for this call, but
+          // some Chromium variants may still reject it; tab activation alone is fine.
+        }
       }
     } else {
       await chrome.tabs.create({ url: calendarUrl });
