@@ -6,7 +6,7 @@
  * @param {Date|string|number} now                    - 인자로 받아 deterministic 보장
  * @returns {Array} 필터된 lecture 배열 (시간순)
  */
-export function filterLecturesForPanel(lectures, dragRange, now) {
+function filterLecturesForPanel(lectures, dragRange, now) {
   if (!Array.isArray(lectures) || lectures.length === 0) return [];
 
   const nowMs = new Date(now).getTime();
@@ -30,4 +30,11 @@ export function filterLecturesForPanel(lectures, dragRange, now) {
   });
 
   return filtered.slice().sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+}
+
+// CJS export for Node tests; also expose as global for browser <script> tag use.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { filterLecturesForPanel };
+} else if (typeof window !== "undefined") {
+  window.LectureFilter = { filterLecturesForPanel };
 }

@@ -1,25 +1,18 @@
 /**
  * calendar-view.js — 그리드 및 사이드 패널 렌더 함수 모음.
  * DOM을 직접 조작하나 chrome API에는 의존하지 않는다.
+ * CJS exports + browser global 이중 지원.
  */
 
-export const WEEK_START_HOUR = 8;   // 08:00
-export const WEEK_END_HOUR = 24;    // 24:00 (자정)
+const WEEK_START_HOUR = 8;   // 08:00
+const WEEK_END_HOUR = 24;    // 24:00 (자정)
 const HOURS_IN_VIEW = WEEK_END_HOUR - WEEK_START_HOUR; // 16
 const PIXELS_PER_HOUR = 60;
 
 const DAY_NAMES = ["일", "월", "화", "수", "목", "금", "토"];
 
 /**
- * ISO datetime 문자열을 KST Date 객체로 해석한다.
- * new Date(string)은 UTC offset이 포함된 RFC3339도 올바르게 처리한다.
- */
-function toDate(str) {
-  return new Date(str);
-}
-
-/**
- * Date를 Asia/Seoul 기준 YYYY-MM-DD 로 변환 (로컬 문자열 비교용).
+ * Date를 Asia/Seoul 기준 YYYY-MM-DD 로 변환.
  */
 function toKSTDateStr(date) {
   return date.toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" });
@@ -52,7 +45,7 @@ function kstDayStartMs(dateStr) {
  * @param {number} dayStartMs - 해당 날의 KST 자정 epoch
  * @returns {{ top: number, height: number, clipped: boolean }}
  */
-export function calcEventPosition(startMs, endMs, dayStartMs) {
+function calcEventPosition(startMs, endMs, dayStartMs) {
   const viewStartMs = dayStartMs + WEEK_START_HOUR * 3600 * 1000;
   const viewEndMs = dayStartMs + WEEK_END_HOUR * 3600 * 1000;
 
@@ -69,9 +62,9 @@ export function calcEventPosition(startMs, endMs, dayStartMs) {
 /**
  * 자정을 넘는 이벤트를 날짜별로 분할하여 [{dateStr, startMs, endMs}] 배열 반환.
  */
-export function splitEventByDay(event) {
-  const startMs = toDate(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
-  const endMs = toDate(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
+function splitEventByDay(event) {
+  const startMs = new Date(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
+  const endMs = new Date(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
 
   const segments = [];
   let curMs = startMs;
@@ -88,15 +81,15 @@ export function splitEventByDay(event) {
 }
 
 /**
- * 이벤트가 시간축(WEEK_START_HOUR~WEEK_END_HOUR) 밖에만 있는지 판단.
+ * 이벤트가 해당 날 시간축(WEEK_START_HOUR~WEEK_END_HOUR) 밖에만 있는지 판단.
  */
-export function isOutOfWeekRange(event, dateStr) {
+function isOutOfWeekRange(event, dateStr) {
   const dayStartMs = kstDayStartMs(dateStr);
   const viewStartMs = dayStartMs + WEEK_START_HOUR * 3600 * 1000;
   const viewEndMs = dayStartMs + WEEK_END_HOUR * 3600 * 1000;
 
-  const startMs = toDate(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
-  const endMs = toDate(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
+  const startMs = new Date(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
+  const endMs = new Date(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
 
   return endMs <= viewStartMs || startMs >= viewEndMs;
 }
@@ -104,8 +97,23 @@ export function isOutOfWeekRange(event, dateStr) {
 /**
  * 이벤트에 somaManaged 클래스가 필요한지.
  */
-export function isSomaManaged(event) {
+function isSomaManaged(event) {
   return event?.extendedProperties?.private?.somaManaged === "1";
+}
+
+/**
+ * 주간 그리드 기준으로 해당 주의 7일 날짜 문자열 배열 반환 (일~토).
+ */
+function getWeekDates(anchorDateStr) {
+  const d = new Date(`${anchorDateStr}T12:00:00+09:00`);
+  const dow = d.getDay();
+  const dates = [];
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(d);
+    day.setDate(d.getDate() - dow + i);
+    dates.push(toKSTDateStr(day));
+  }
+  return dates;
 }
 
 /**
@@ -115,20 +123,18 @@ export function isSomaManaged(event) {
  * @param {Array} events     - CalendarEvent[]
  * @returns {{ outOfRangeCount: number, weekDates: string[] }}
  */
-export function renderWeekGrid(gridEl, anchorDate, events) {
+function renderWeekGrid(gridEl, anchorDate, events) {
   gridEl.innerHTML = "";
   gridEl.className = "cal-grid week-mode";
 
   const anchorStr = toKSTDateStr(anchorDate);
   const weekDates = getWeekDates(anchorStr);
-
   const todayStr = toKSTDateStr(new Date());
 
-  // Fragment로 한 번에 삽입
-  const frag = document.createDocumentFragment();
+  const frag = gridEl.ownerDocument.createDocumentFragment();
 
   // 빈 시간축 헤더 셀
-  const timeHeaderCell = document.createElement("div");
+  const timeHeaderCell = gridEl.ownerDocument.createElement("div");
   timeHeaderCell.className = "cal-col-header";
   timeHeaderCell.style.gridColumn = "1";
   timeHeaderCell.style.gridRow = "1";
@@ -137,7 +143,7 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
   // 요일 헤더
   weekDates.forEach((dateStr, i) => {
     const d = new Date(`${dateStr}T12:00:00+09:00`);
-    const cell = document.createElement("div");
+    const cell = gridEl.ownerDocument.createElement("div");
     cell.className = "cal-col-header" + (dateStr === todayStr ? " today-header" : "");
     cell.style.gridColumn = String(i + 2);
     cell.style.gridRow = "1";
@@ -147,13 +153,13 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
   });
 
   // 시간 축 컨테이너
-  const timeAxisWrapper = document.createElement("div");
+  const timeAxisWrapper = gridEl.ownerDocument.createElement("div");
   timeAxisWrapper.style.gridColumn = "1";
   timeAxisWrapper.style.gridRow = "2";
   timeAxisWrapper.style.position = "relative";
   timeAxisWrapper.style.height = HOURS_IN_VIEW * PIXELS_PER_HOUR + "px";
   for (let h = WEEK_START_HOUR; h <= WEEK_END_HOUR; h++) {
-    const label = document.createElement("div");
+    const label = gridEl.ownerDocument.createElement("div");
     label.className = "cal-hour-label";
     label.style.top = (h - WEEK_START_HOUR) * PIXELS_PER_HOUR + "px";
     label.textContent = `${String(h).padStart(2, "0")}:00`;
@@ -164,31 +170,21 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
   // 이벤트를 날짜별 버킷으로 분배
   const buckets = {};
   weekDates.forEach((d) => { buckets[d] = []; });
-  const outOfRangeBuckets = {};
-  weekDates.forEach((d) => { outOfRangeBuckets[d] = []; });
-
-  let outOfRangeCount = 0;
 
   for (const event of events) {
     const segments = splitEventByDay(event);
-    let addedToGrid = false;
     for (const seg of segments) {
       if (buckets[seg.dateStr]) {
         buckets[seg.dateStr].push({ event, seg });
-        if (!isOutOfWeekRange(event, seg.dateStr)) {
-          addedToGrid = true;
-        }
       }
-    }
-    if (!addedToGrid) {
-      // 이 이벤트가 보이는 날짜 중 아무데서도 시간축 내에 안 들어옴
-      // 출력 카운트는 아래에서 처리
     }
   }
 
+  let outOfRangeCount = 0;
+
   // 날짜 컬럼 렌더
   weekDates.forEach((dateStr, i) => {
-    const col = document.createElement("div");
+    const col = gridEl.ownerDocument.createElement("div");
     col.className = "cal-week-col" + (dateStr === todayStr ? " today-col" : "");
     col.style.gridColumn = String(i + 2);
     col.style.gridRow = "2";
@@ -197,7 +193,7 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
 
     // 시간 줄 그리기
     for (let h = 0; h < HOURS_IN_VIEW; h++) {
-      const line = document.createElement("div");
+      const line = gridEl.ownerDocument.createElement("div");
       line.className = "cal-hour-line";
       line.style.top = h * PIXELS_PER_HOUR + "px";
       col.appendChild(line);
@@ -213,17 +209,19 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
         continue;
       }
       const { top, height } = calcEventPosition(seg.startMs, seg.endMs, dayStartMs);
-      const block = document.createElement("div");
+      const block = gridEl.ownerDocument.createElement("div");
       block.className = "cal-event" + (isSomaManaged(event) ? " soma-managed" : "");
       block.style.top = top + "px";
       block.style.height = height + "px";
-      const title = document.createElement("div");
+      const title = gridEl.ownerDocument.createElement("div");
       title.className = "cal-event-title";
       title.textContent = event.summary || "(제목 없음)";
       block.appendChild(title);
       if (event.htmlLink) {
         block.title = event.summary || "";
-        block.addEventListener("click", () => window.open(event.htmlLink, "_blank"));
+        block.addEventListener("click", () => {
+          if (typeof window !== "undefined") window.open(event.htmlLink, "_blank");
+        });
       }
       col.appendChild(block);
     }
@@ -237,11 +235,8 @@ export function renderWeekGrid(gridEl, anchorDate, events) {
 
 /**
  * viewMode="month" 그리드를 #cal-grid에 렌더한다.
- * @param {Element} gridEl
- * @param {Date} anchorDate
- * @param {Array} events
  */
-export function renderMonthGrid(gridEl, anchorDate, events) {
+function renderMonthGrid(gridEl, anchorDate, events) {
   gridEl.innerHTML = "";
   gridEl.className = "cal-grid month-mode";
 
@@ -249,24 +244,17 @@ export function renderMonthGrid(gridEl, anchorDate, events) {
   const [year, month] = anchorStr.split("-").map(Number);
   const todayStr = toKSTDateStr(new Date());
 
-  const frag = document.createDocumentFragment();
+  const frag = gridEl.ownerDocument.createDocumentFragment();
 
   DAY_NAMES.forEach((d) => {
-    const h = document.createElement("div");
+    const h = gridEl.ownerDocument.createElement("div");
     h.className = "cal-col-header";
     h.textContent = d;
     frag.appendChild(h);
   });
 
-  // 이 달의 1일
   const firstDay = new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00+09:00`);
-  const startDow = firstDay.getDay(); // 0=일
 
-  // 이전 달 말일
-  const prevMonthEnd = new Date(firstDay);
-  prevMonthEnd.setDate(0);
-
-  // 이벤트 날짜별 버킷
   const eventByDate = {};
   for (const event of events) {
     const segments = splitEventByDay(event);
@@ -276,49 +264,38 @@ export function renderMonthGrid(gridEl, anchorDate, events) {
     }
   }
 
-  // 마지막 달의 날짜수
+  const startDow = firstDay.getDay();
   const daysInMonth = new Date(year, month, 0).getDate();
   const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
 
   for (let i = 0; i < totalCells; i++) {
     const offset = i - startDow;
-    let cellDate;
-    let isOtherMonth = false;
-    if (offset < 0) {
-      cellDate = new Date(firstDay);
-      cellDate.setDate(offset + 1);
-      isOtherMonth = true;
-    } else if (offset >= daysInMonth) {
-      cellDate = new Date(firstDay);
-      cellDate.setDate(offset + 1);
-      isOtherMonth = true;
-    } else {
-      cellDate = new Date(firstDay);
-      cellDate.setDate(offset + 1);
-    }
+    const cellDate = new Date(firstDay);
+    cellDate.setDate(offset + 1);
+    const isOtherMonth = offset < 0 || offset >= daysInMonth;
 
     const dateStr = toKSTDateStr(cellDate);
-    const cell = document.createElement("div");
+    const cell = gridEl.ownerDocument.createElement("div");
     cell.className = "cal-month-cell" +
       (isOtherMonth ? " other-month" : "") +
       (dateStr === todayStr ? " today" : "");
     cell.setAttribute("aria-label", dateStr);
     cell.dataset.date = dateStr;
 
-    const dateLabel = document.createElement("div");
+    const dateLabel = gridEl.ownerDocument.createElement("div");
     dateLabel.className = "cal-month-cell-date";
     dateLabel.textContent = cellDate.getDate();
     cell.appendChild(dateLabel);
 
     if (eventByDate[dateStr]) {
       for (const ev of eventByDate[dateStr]) {
-        const pill = document.createElement("div");
+        const pill = gridEl.ownerDocument.createElement("div");
         pill.className = "cal-month-event" + (isSomaManaged(ev) ? " soma-managed" : "");
         pill.textContent = ev.summary || "(제목 없음)";
         if (ev.htmlLink) {
           pill.addEventListener("click", (e) => {
             e.stopPropagation();
-            window.open(ev.htmlLink, "_blank");
+            if (typeof window !== "undefined") window.open(ev.htmlLink, "_blank");
           });
         }
         cell.appendChild(pill);
@@ -332,52 +309,34 @@ export function renderMonthGrid(gridEl, anchorDate, events) {
 }
 
 /**
- * 주간 그리드 기준으로 해당 주의 7일 날짜 문자열 배열 반환 (일~토).
- */
-export function getWeekDates(anchorDateStr) {
-  const d = new Date(`${anchorDateStr}T12:00:00+09:00`);
-  const dow = d.getDay();
-  const dates = [];
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(d);
-    day.setDate(d.getDate() - dow + i);
-    dates.push(toKSTDateStr(day));
-  }
-  return dates;
-}
-
-/**
  * 사이드 패널 본문을 렌더한다.
- * @param {Element} bodyEl
- * @param {Array} lectures   - filterLecturesForPanel 결과
- * @param {string|null} emptyMsg  - 표시할 안내 메시지 (null이면 기본)
  */
-export function renderSidePanel(bodyEl, lectures, emptyMsg) {
+function renderSidePanel(bodyEl, lectures, emptyMsg) {
   bodyEl.innerHTML = "";
-  const frag = document.createDocumentFragment();
+  const frag = bodyEl.ownerDocument.createDocumentFragment();
 
   if (!lectures || lectures.length === 0) {
-    const msg = document.createElement("div");
+    const msg = bodyEl.ownerDocument.createElement("div");
     msg.className = "side-empty-msg";
     msg.textContent = emptyMsg || "현재 신청 가능한 특강이 없습니다.";
     frag.appendChild(msg);
   } else {
     for (const lec of lectures) {
-      const card = document.createElement("div");
+      const card = bodyEl.ownerDocument.createElement("div");
       card.className = "lecture-card";
       card.tabIndex = 0;
       card.setAttribute("role", "button");
       card.setAttribute("aria-label", lec.title);
 
-      const startDate = toDate(lec.startAt);
-      const endDate = toDate(lec.endAt);
+      const startDate = new Date(lec.startAt);
+      const endDate = new Date(lec.endAt);
       const timeStr = `${toKSTDateStr(startDate)} ${toKSTTimeStr(startDate)} ~ ${toKSTTimeStr(endDate)}`;
 
-      const titleEl = document.createElement("div");
+      const titleEl = bodyEl.ownerDocument.createElement("div");
       titleEl.className = "lecture-card-title";
       titleEl.textContent = lec.title;
 
-      const timeEl = document.createElement("div");
+      const timeEl = bodyEl.ownerDocument.createElement("div");
       timeEl.className = "lecture-card-time";
       timeEl.textContent = timeStr;
 
@@ -385,7 +344,7 @@ export function renderSidePanel(bodyEl, lectures, emptyMsg) {
       card.appendChild(timeEl);
 
       if (lec.statusText) {
-        const statusEl = document.createElement("div");
+        const statusEl = bodyEl.ownerDocument.createElement("div");
         statusEl.className = "lecture-card-status";
         statusEl.textContent = lec.statusText;
         card.appendChild(statusEl);
@@ -393,7 +352,9 @@ export function renderSidePanel(bodyEl, lectures, emptyMsg) {
 
       const targetUrl = lec.url || lec.detailUrl;
       if (targetUrl) {
-        const openTab = () => window.open(targetUrl, "_blank");
+        const openTab = () => {
+          if (typeof window !== "undefined") window.open(targetUrl, "_blank");
+        };
         card.addEventListener("click", openTab);
         card.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") {
@@ -412,11 +373,8 @@ export function renderSidePanel(bodyEl, lectures, emptyMsg) {
 
 /**
  * 빈 lectureSnapshot 관련 안내 메시지를 판별.
- * @param {{ lectures:Array, takenAt:string }|null} snapshot
- * @param {{ pausedReason:string|null }|null} pollingState
- * @returns {string|null}
  */
-export function resolveSidePanelEmptyMsg(snapshot, pollingState) {
+function resolveSidePanelEmptyMsg(snapshot, pollingState) {
   if (!snapshot || !snapshot.takenAt) {
     return "백그라운드 폴링이 아직 실행되지 않았습니다. 옵션 열기 또는 지금 갱신을 눌러주세요.";
   }
@@ -428,10 +386,8 @@ export function resolveSidePanelEmptyMsg(snapshot, pollingState) {
 
 /**
  * anchorDate 기준으로 timeMin/timeMax ISO 문자열 반환.
- * week 모드: 해당 주 일요일~토요일 end
- * month 모드: 해당 달 1일~마지막 날 end
  */
-export function calcFetchRange(viewMode, anchorDate) {
+function calcFetchRange(viewMode, anchorDate) {
   const anchorStr = toKSTDateStr(anchorDate);
 
   if (viewMode === "week") {
@@ -441,11 +397,10 @@ export function calcFetchRange(viewMode, anchorDate) {
     return { timeMin, timeMax };
   }
 
-  // month
   const [year, month] = anchorStr.split("-").map(Number);
   const firstDay = new Date(`${year}-${String(month).padStart(2, "0")}-01T00:00:00+09:00`);
-  const lastDay = new Date(year, month, 0);
-  const lastStr = toKSTDateStr(lastDay);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const lastStr = `${year}-${String(month).padStart(2, "0")}-${String(daysInMonth).padStart(2, "0")}`;
   return {
     timeMin: firstDay.toISOString(),
     timeMax: new Date(`${lastStr}T23:59:59+09:00`).toISOString()
@@ -455,7 +410,7 @@ export function calcFetchRange(viewMode, anchorDate) {
 /**
  * anchorDate 기준 기간 라벨 문자열 반환.
  */
-export function calcPeriodLabel(viewMode, anchorDate) {
+function calcPeriodLabel(viewMode, anchorDate) {
   const anchorStr = toKSTDateStr(anchorDate);
   if (viewMode === "week") {
     const dates = getWeekDates(anchorStr);
@@ -463,4 +418,39 @@ export function calcPeriodLabel(viewMode, anchorDate) {
   }
   const [year, month] = anchorStr.split("-").map(Number);
   return `${year}년 ${month}월`;
+}
+
+// CJS export for Node tests; browser global for <script> tag use.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    WEEK_START_HOUR,
+    WEEK_END_HOUR,
+    calcEventPosition,
+    splitEventByDay,
+    isOutOfWeekRange,
+    isSomaManaged,
+    getWeekDates,
+    renderWeekGrid,
+    renderMonthGrid,
+    renderSidePanel,
+    resolveSidePanelEmptyMsg,
+    calcFetchRange,
+    calcPeriodLabel
+  };
+} else if (typeof window !== "undefined") {
+  window.CalendarView = {
+    WEEK_START_HOUR,
+    WEEK_END_HOUR,
+    calcEventPosition,
+    splitEventByDay,
+    isOutOfWeekRange,
+    isSomaManaged,
+    getWeekDates,
+    renderWeekGrid,
+    renderMonthGrid,
+    renderSidePanel,
+    resolveSidePanelEmptyMsg,
+    calcFetchRange,
+    calcPeriodLabel
+  };
 }
