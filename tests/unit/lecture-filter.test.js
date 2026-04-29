@@ -95,3 +95,29 @@ test("드래그 없음: 시간순 정렬", () => {
   const result = filterLecturesForPanel(lectures, null, NOW);
   assert.deepEqual(result.map((l) => l.id), ["A", "B"]);
 });
+
+test("additionalFilters: 모든 predicate가 true인 lecture만 통과 (AND 결합)", () => {
+  const lectures = [
+    makeLecture("alpha", "2026-05-10T10:00:00+09:00", "2026-05-10T11:00:00+09:00"),
+    makeLecture("beta",  "2026-05-10T12:00:00+09:00", "2026-05-10T13:00:00+09:00"),
+    makeLecture("gamma", "2026-05-10T14:00:00+09:00", "2026-05-10T15:00:00+09:00"),
+  ];
+  lectures[0].title = "alpha";
+  lectures[1].title = "beta";
+  lectures[2].title = "gamma";
+
+  const startsWithA = (lec) => lec.title.startsWith("a");
+  const titleHasFiveOrMoreChars = (lec) => lec.title.length >= 5;
+
+  const result = filterLecturesForPanel(lectures, null, NOW, [startsWithA, titleHasFiveOrMoreChars]);
+  assert.deepEqual(result.map((l) => l.id), ["alpha"]);
+});
+
+test("additionalFilters: 빈 배열이면 기본 필터만 적용", () => {
+  const lectures = [
+    makeLecture("A", "2026-05-10T11:00:00+09:00", "2026-05-10T12:00:00+09:00"),
+  ];
+
+  const result = filterLecturesForPanel(lectures, null, NOW, []);
+  assert.deepEqual(result.map((l) => l.id), ["A"]);
+});
