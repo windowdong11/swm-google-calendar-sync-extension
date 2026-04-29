@@ -2,4 +2,5 @@ dist/
 .DS_Store
 .agent/soma-login.local.json
 .agent/*.local.json
+.agent/raw/
 node_modules/
