@@ -15,6 +15,19 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
+### 2026-04-29 Round 1 진입 (B-5 fix + spec 01 재설계)
+
+**B-5 회귀 fix**
+- `fix/content-scripts-test-regression` 1 커밋(b812215) → main 머지
+- `example/soma-cancelschedule.html` 강의 시각 `2026.04.30` → `2099.04.30` (시계 흐름 무관). history fixture(`2099-05-10`) 패턴 일관 적용.
+- main HEAD `npm test` 79/79 pass
+
+**spec 01 본문 재설계 (사용자 결정 반영)**
+- 본래 D-3: lectureSnapshot의 모든 SoMA 특강을 캘린더 그리드에 직접 렌더
+- 변경 후: **캘린더 본체 = Google Calendar 이벤트만** (`GET_CALENDAR_EVENTS` 메시지 재사용, SoMA 신청 특강은 OAuth가 이미 Calendar에 삽입), **사이드 패널 = lectureSnapshot 기반 미신청 특강** (기본 `endAt < now` 제외 + 빈 영역 드래그 시 완전 포함 필터)
+- T-01 해소(셀 충돌 패널 폐기), 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련
+- 다음 단계: 사용자 본문 confirm 후 코딩 진입
+
 ### 2026-04-29 Round 0 머지 완료
 
 **spec 05 (background polling) 핵심 경로 MVP**
@@ -91,7 +104,11 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 ### 결정 완료 항목 (참고)
 
 - [x] **Spec 05 머지 (2026-04-29)** — D-05-1 chrome.offscreen + DOMParser, D-05-3 코드 명칭 `parseListLectures` 사용. 후속 PR로 분리: 옵션 UI(묶음 E), 라이브 URL 쿼리스트링(D-05-2 — B-1 raw 캡처 후)
-- [x] **Spec 01 — 캘린더 뷰** — U-01-1 새 탭 전용 페이지 진입, U-01-2 시간축 08:00~24:00, D-1 데이터 소스 = spec 05 `lectureSnapshot` (D-3 결정)
+- [x] **Spec 01 — 캘린더 뷰** (2026-04-29 의도 전환):
+  - U-01-1 새 탭 전용 페이지 진입, U-01-2 시간축 08:00~24:00 (유지)
+  - **D-3 데이터 소스 정의 변경**: 본래 "lectureSnapshot의 모든 SoMA 특강을 그리드에 직접 렌더" → 변경 후 "**캘린더 본체 = Google Calendar 이벤트만** (`GET_CALENDAR_EVENTS` 메시지 재사용, SoMA 신청 특강은 OAuth가 이미 Calendar에 삽입), **사이드 패널 = lectureSnapshot 기반 미신청 특강**". 신규 메시지 없음.
+  - **T-01 해소**: 셀 충돌 패널은 호버/클릭 둘 다 채택 안 함. 대신 **빈 영역 드래그 → 사이드 패널 활성 → 드래그 범위에 완전 포함되는 lecture만 필터** UX. 기본 필터는 `endAt < now` 제외.
+  - 사이드 패널 필터 슬롯 인터페이스만 마련, spec 02·03·04 필터는 추후 plug-in
 - [x] **2026-04-29 묶음 A + spec 07 폐기**
   - **spec 07 폐기**: 시간/장소/메타 변경 알림 기능 자체 제외. chrome.notifications 발송 책임은 spec 08이 흡수
   - **U-04-1**: `almostFull` = 잔여 정확히 1자리. 옵션화 X (사용 후 재검토)
@@ -110,7 +127,9 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 | ID | 위치 | 내용 | 예상 결정 시점 |
 |---|---|---|---|
-| T-01 | spec 01 | 캘린더 셀 충돌 패널: 호버 툴팁 vs 클릭 후 패널 | 캘린더 뷰 코딩 시 |
+| ~~T-01~~ | spec 01 | ✅ 해소(2026-04-29): 셀 충돌 패널 폐기, 빈 영역 드래그 → 사이드 패널 완전 포함 필터 | — |
+| T-01a | spec 01 | Google Calendar fetch 실패 시 fallback (단순 안내 vs 자동 재시도) | calendar 코딩 시 |
+| T-01b | spec 01 | 드래그 영역이 시간축 외(02:00~05:00)일 때 처리 — clamp 권장 | calendar 코딩 시 |
 | T-02 | spec 02 | 와일드카드를 정규식까지 허용할지 | 매핑 UI 설계 시 |
 | T-03 | spec 03 | 동명이인 처리 정규화 알고리즘 | 멘토 정규화 함수 작성 시 |
 | T-04 | spec 04 | `cancelled` 신청 상태 판정 방법 (접수내역 의존) | 필터 엔진 작성 시 |
@@ -151,11 +170,11 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
 
-### B-5 (신규) `tests/unit/content-scripts.test.js` 회귀
+### B-5 ✅ 해소 (2026-04-29)
 
-- **무엇**: `detail cancel intercepts SoMA cancel success and requests Calendar deletion` 테스트가 main HEAD에서 fail (timeout). spec 05·chore PR 영향 아님(main HEAD 이전부터 fail).
-- **왜 필요한가**: npm test가 깨끗하게 통과해야 회귀 감지가 가능. CI 들어오기 전 정리 권장.
-- **구체적 행동**: Round 1 시작 전 단발 fix 세션. content-scripts.test.js와 관련 src/content/* 코드를 비교, timeout 사유 파악. 30분 이내 예상.
+- **원인**: `example/soma-cancelschedule.html` fixture의 강의 시각이 `2026.04.30 14:00`로 하드코딩 → 현재 시각이 24h 미만 떨어진 시점부터 `apply.js:canCancelBeforeStart()` (`eventStart - now > 24h`)가 false → cancel API 미호출 → `DELETE_CALENDAR_EVENT_BY_LECTURE` 메시지 미발송 → `waitFor` timeout.
+- **해결**: fixture 강의 날짜를 `2099.04.30`으로 영구 미래화 (`fix(test): future-proof cancel fixture date against system clock drift`, b812215). history fixture(`2099-05-10`)와 동일 패턴.
+- **결과**: main HEAD `npm test` 79/79 pass.
 
 ---
 
@@ -196,15 +215,16 @@ B-1 ─── 02 (category) ──┐
 | Claude | 비식별화 도구 (`npm run refresh:fixtures`) | ✅ 머지됨 (7 커밋) |
 | 자동 분석 | B-1 부분 해소 (site-current fixture) | ✅ U-02-1·U-03-1 확정, B-2 정원 노출 확정 |
 
-### 5.3 Round 1 — 다음 진입 (병렬 2개)
+### 5.3 Round 1 — 진행 중 (2026-04-29 시작)
 
-| 트랙 | 작업 | 의존 |
+| 트랙 | 작업 | 상태 |
 |---|---|---|
-| Claude | `feature/01-calendar-view` → `calendar.html` 렌더 → 머지 | spec 05 ✅ |
-| Claude | (선택) B-5 `content-scripts.test.js` 회귀 fix — 단발 30분 | 독립 |
-| 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | — |
+| Claude | B-5 회귀 fix (`fix/content-scripts-test-regression`) | ✅ 머지(b812215). main HEAD 79/79 pass |
+| Claude | spec 01 본문 재작성 (Google Calendar 본체 + 사이드 패널 드래그 필터) | ✅ 작성, 사용자 confirm 대기 후 코딩 진입 |
+| Claude | spec 01 코딩 (`feature/01-calendar-view`) | 🟡 진입 예정 (본 본문 confirm 후) |
+| 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | — (병행) |
 
-> spec 01은 사용자 결정 의존성이 없어 Claude가 단독 진행. 사용자는 이 시간에 알림 정책·범위 결정 모아 처리. B-5 회귀 fix는 spec 01 작업 전 또는 후 단발로.
+> spec 01의 핵심 의도가 사용자 결정으로 전환됨(Google Calendar 본체 + 사이드 패널 드래그 필터). 묶음 D 결정 완료 항목 참조. 사용자는 spec 01 코딩 진행 중 묶음 B·C 결정 모아 처리.
 
 ### 5.4 Round 2 — 두 트랙 병렬 (B-1 캡처 도착 가정)
 
@@ -344,3 +364,4 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - 2026-04-29: §2를 묶음 A~E 구조로 재편(차단성 🛑/⏸️/✅ 분류 추가), §5를 라운드 단위로 재배치(Round 0~3 + 의존성 그래프 + 타임라인 + 병렬 효율 룰 + 함정 포인트), §6 권장 시퀀스를 Round 0 진입 형태로 갱신, **§7 작업 모드 신설**(code-delegate + worktree 병렬, 토큰 절약 룰, 안티패턴), §8/§9 번호 시프트.
 - 2026-04-29: 묶음 A 결정 완료 + **spec 07 폐기**. spec 04·06·07·08·09·10 본문 동기화.
 - **2026-04-29 Round 0 머지 완료**: spec 05 핵심 경로 MVP(7 커밋, 55 테스트) + 비식별화 도구(`npm run refresh:fixtures`, 7 커밋, 24 테스트) 두 브랜치 main 머지. spec 05 `Status: shipped`. 묶음 D 일부 자동 해소(U-02-1·U-03-1 site-current fixture 분석으로 확정), B-1 부분 해소·B-2 정원 노출 확정. B-3 라이브 검증은 옵션 UI 후속 PR 시점으로 보류. 새 차단 항목 B-5(`content-scripts.test.js` 회귀) 추가. §1·§2(묶음 D·E)·§4(B-1·B-2·B-3·B-5)·§5(타임라인·라운드)·§6(권장 시퀀스 Round 1 진입) 갱신.
+- **2026-04-29 Round 1 진입**: B-5 ✅ 머지(b812215, fixture 시각 영구 미래화). spec 01 본문 사용자 결정 반영해 통째 재작성 — 캘린더 본체를 lectureSnapshot 직접 렌더에서 **Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 메시지 재사용)** 으로 전환, **사이드 패널에 lectureSnapshot 기반 미신청 특강 + 빈 영역 드래그 시 완전 포함 필터** UX 도입. T-01 해소, 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련. §1(직전 세션)·§2(묶음 D Spec 01 결정 항목 갱신)·§3(T-01 해소·T-01a/b 신설)·§4(B-5 해소)·§5.3(Round 1 진행 표) 갱신.
