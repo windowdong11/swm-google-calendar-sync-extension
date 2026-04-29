@@ -5,7 +5,8 @@
   "description": "SOMA Schedule Helper Chrome extension",
   "type": "commonjs",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "refresh:fixtures": "node scripts/anonymize-fixtures.mjs"
   },
   "devDependencies": {
     "jsdom": "^29.1.0"
