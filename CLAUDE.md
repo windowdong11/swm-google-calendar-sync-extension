@@ -16,14 +16,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 명령어
 
 ```bash
-npm test                                        # 전체 테스트 (node --test, jsdom 의존)
+npm test                                        # 단위 테스트 (node --test, jsdom 의존)
 node --test tests/unit/parsers.test.js          # 단일 파일 실행
 node --test --test-name-pattern="manifest"      # 이름으로 필터
+npm run test:e2e:install                        # Playwright Chromium 다운로드 (한 번)
+npm run test:e2e                                # E2E 자동 검증 (spec 12, 5개 시나리오)
+HEADLESS=1 npm run test:e2e                     # headless='new' 모드 (CI/백그라운드)
+npm run test:all                                # 단위 + E2E 한 번에
 node scripts/build-release.mjs --oauth-client-id='<CHROME_EXT_OAUTH_CLIENT_ID>'
 node scripts/build-release.mjs --include-key --oauth-client-id='...'   # 스토어 재업로드용 (key 유지)
 ```
 
-빌드 단계 없음(Manifest V3 확장을 unpacked 그대로 로드). `npm install`은 jsdom 한 개만 깐다.
+빌드 단계 없음(Manifest V3 확장을 unpacked 그대로 로드). `npm install`은 jsdom + @playwright/test 두 개만 깐다.
 
 ## 아키텍처 핵심
 
@@ -53,10 +57,11 @@ node scripts/build-release.mjs --include-key --oauth-client-id='...'   # 스토�
 
 ## 실행 환경 / 검증
 
-- **실제 Calendar 검증 모드**가 기준(`docs/agent-troubleshooting/runtime-env.md`). SoMA `/apply.json`/`/applyCancel.json`/`/cancel.json` 세 엔드포인트만 목업하고 Google Calendar는 실제 API로 확인.
+- **자동 E2E 모드**(`npm run test:e2e`, spec 12) — Playwright + Chromium persistent context. OAuth/Google Calendar/SoMA fetch는 page.route + SW evaluate stub으로 mock. 5개 시나리오(B-1~B-4 + C) 자동 ✅/❌. 신규 spec 시나리오는 `tests/e2e/AUTHORING.md` 절차로 추가.
+- **실제 Calendar 검증 모드**가 라이브 회귀 기준(`docs/agent-troubleshooting/runtime-env.md`). SoMA `/apply.json`/`/applyCancel.json`/`/cancel.json` 세 엔드포인트만 목업하고 Google Calendar는 실제 API로 확인.
 - **전체 목업 모드**(`mock/mock-env.js`)는 DOM 파싱·UI 흐름 빠른 확인용. 캘린더 생성/삭제 최종 검증에는 사용하지 않는다.
-- 테스트 fixture: `tests/fixtures/site-current/`(파서 회귀용 실제 사이트 캡처) vs `mock/`(브라우저 수동 확인용). 역할이 다르니 섞지 말 것.
-- 비Chrome Chromium 브라우저(Arc/Brave/Edge)는 `chrome.identity.getAuthToken()`이 실패할 수 있다. 검증은 Chrome에서.
+- 테스트 fixture: `tests/fixtures/site-current/`(파서 회귀 + spec 12 SoMA mock) vs `mock/`(브라우저 수동 확인용) vs `tests/e2e/fixtures/`(E2E 시나리오 전용). 역할이 다르니 섞지 말 것.
+- 비Chrome Chromium 브라우저(Arc/Brave/Edge)는 `chrome.identity.getAuthToken()`이 실패할 수 있다. 라이브 검증은 Chrome에서. (spec 12 자동 테스트는 `chrome.identity` stub으로 우회.)
 
 ## 보안 / 비밀값
 

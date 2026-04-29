@@ -141,6 +141,11 @@
 | 09 | 신규 특강 알림 + 멘토 별표 필터 | [`09-mentor-watchlist.md`](09-mentor-watchlist.md) | draft | 03·06·08 |
 | 10 | 관심 특강 등록·자리 알림 | [`10-lecture-watchlist.md`](10-lecture-watchlist.md) | draft | 06·08·B-2 |
 
+### 도구 트랙 (라운드 외 인프라)
+| ID | 제목 | 파일 | Status | 의존 |
+|---|---|---|---|---|
+| 12 | Claude 자동 E2E 테스트 환경 | [`12-test-automation.md`](12-test-automation.md) | in-progress | 01·05 (시나리오) |
+
 phase 의존 관계: 본래 Phase 1과 Phase 2는 코드상 독립이었으나, **2026-04-28 결정으로 spec 01이 spec 05의 `lectureSnapshot`을 데이터 소스로 사용**하게 되어 phase 1 안의 spec 01만 phase 2의 spec 05에 선행 의존한다. Phase 3은 Phase 2(05·06·08)에 의존한다. spec 07은 폐기되었으며 chrome.notifications 발송 책임은 spec 08이 흡수한다. 작업 진입 순서·차단 항목은 [`NEXT-SESSION.md`](NEXT-SESSION.md) §5·§6 참조.
 
 ---
@@ -150,3 +155,4 @@ phase 의존 관계: 본래 Phase 1과 Phase 2는 코드상 독립이었으나, 
 - 2026-04-28: 초기 스펙 디렉토리 생성. Phase 인덱스만 등록, 개별 spec 본문은 별도 PR로 추가 예정.
 - 2026-04-28: spec 01 결정 반영(새 탭 진입·08:00~24:00·spec 05 데이터 소스 D-3) → Phase 1의 spec 01이 Phase 2의 spec 05에 선행 의존하게 됨. 표에 의존 컬럼 추가.
 - 2026-04-29: 묶음 A 결정 6개 + spec 07 폐기 결정 반영. spec 07 deprecated 표시, chrome.notifications 발송 책임을 spec 08로 이관. spec 09 의미 전환(전역 신규 특강 알림 + 별표 멘토 필터, 동일 제목 그룹화). spec 10 `seat-closed` 알림 제외. spec 04 `almostFull = 잔여 1자리` 하드코드. spec 06 time/place/meta 이벤트 타입 제거. Phase 3 의존 컬럼에서 07 제거(09=03·06·08, 10=06·08·B-2).
+- 2026-04-30: 도구 트랙으로 spec 12 (Claude 자동 E2E 테스트 환경) 신설. src/ 미변경, Playwright 기반 5개 시나리오(B-1~B-4 + C polling) 자동 검증 + 향후 spec의 시나리오 자동화 기반.

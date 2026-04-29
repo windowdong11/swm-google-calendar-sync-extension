@@ -67,8 +67,10 @@
 
 ### 현재 상태
 - spec 05: `Status: shipped` (옵션 UI·라이브 URL은 후속 PR)
-- spec 01·02·03·04·06·08·09·10: `Status: draft`
+- spec 01: `Status: shipped`. 단 spec 12 인프라가 라이브 회귀 2건 자동 발견 (§4 B-7 참조)
+- spec 02·03·04·06·08·09·10·11: `Status: draft`
 - spec 07: `Status: deprecated` (책임 spec 08에 흡수)
+- spec 12: `Status: shipped` (인프라 + 6/8 시나리오 활성화. B-1 dedupe·B-2 events는 spec 01 회귀로 차단, fix 후 활성화)
 
 ---
 
@@ -185,6 +187,21 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 ### B-4 (선택) Chrome OS 알림 권한 동작 확인
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
+
+### B-7 spec 01 회귀 2건 — 🛑 차단 (2026-04-30, spec 12 자동 검증으로 발견)
+
+본래 사용자 라이브 검증 백로그(B-1~B-4)였던 항목 중 spec 12 인프라가 자동 검증을 시도하다 발견. spec 01 머지 시점(2026-04-29)에 라이브 환경 미검증으로 인해 누락.
+
+- **B-7-1 GET_CALENDAR_EVENTS 응답 형식 불일치**:
+  - `src/background/service-worker.js:200-217` `normalizeEvent`가 Google API items를 `{ id, title, startAt, endAt, htmlLink, calendarId, transparency, isSomaLecture, somaQustnrSn }` 평면 객체로 변환.
+  - `src/calendar/calendar-view.js:66` `splitEventByDay`는 `event.start.dateTime`를 기대 → `Cannot read properties of undefined (reading 'dateTime')`로 그리드 렌더 fail.
+  - 단위 테스트(`tests/unit/calendar-view.test.js`)는 raw 형식으로 시뮬해 통과 → 머지 통과.
+  - 수정: (a) `calendar-view.js`가 평면 형식도 받도록 — `event.startAt || event.start?.dateTime` 패턴, `extendedProperties` 접근부도 `event.isSomaLecture` fallback. 단위 테스트 영향 최소.
+- **B-7-2 manifest.json `tabs` permission 누락**:
+  - `src/background/service-worker.js:803` `chrome.action.onClicked` 핸들러에서 `chrome.tabs.query({ url: calendarUrl })` 호출 → 결과 url 필드 빈 값 → dedupe 실패.
+  - 수정: `manifest.json` permissions에 `"tabs"` 추가 (가장 단순) 또는 `chrome.storage.local.lastCalendarTabId` 추적.
+
+후속 PR (`fix/spec-01-regressions`) 한 번에 두 회귀 fix 후 `tests/e2e/scenarios/b1-toolbar.spec.js`·`b2-calendar.spec.js`의 `test.skip` 제거 → 8/8 활성화.
 
 ### B-5 ✅ 해소 (2026-04-29)
 
@@ -381,4 +398,5 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - **2026-04-29 Round 0 머지 완료**: spec 05 핵심 경로 MVP(7 커밋, 55 테스트) + 비식별화 도구(`npm run refresh:fixtures`, 7 커밋, 24 테스트) 두 브랜치 main 머지. spec 05 `Status: shipped`. 묶음 D 일부 자동 해소(U-02-1·U-03-1 site-current fixture 분석으로 확정), B-1 부분 해소·B-2 정원 노출 확정. B-3 라이브 검증은 옵션 UI 후속 PR 시점으로 보류. 새 차단 항목 B-5(`content-scripts.test.js` 회귀) 추가. §1·§2(묶음 D·E)·§4(B-1·B-2·B-3·B-5)·§5(타임라인·라운드)·§6(권장 시퀀스 Round 1 진입) 갱신.
 - **2026-04-29 Round 1 진입**: B-5 ✅ 머지(b812215, fixture 시각 영구 미래화). spec 01 본문 사용자 결정 반영해 통째 재작성 — 캘린더 본체를 lectureSnapshot 직접 렌더에서 **Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 메시지 재사용)** 으로 전환, **사이드 패널에 lectureSnapshot 기반 미신청 특강 + 빈 영역 드래그 시 완전 포함 필터** UX 도입. T-01 해소, 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련. §1(직전 세션)·§2(묶음 D Spec 01 결정 항목 갱신)·§3(T-01 해소·T-01a/b 신설)·§4(B-5 해소)·§5.3(Round 1 진행 표) 갱신.
 - **2026-04-29 Round 1 머지 완료**: spec 01 calendar-view 11 commits → main 머지. coder(sonnet) 위임 → code-reviewer(sonnet) 사이클 → 5 fix(REV-1~5) 적용 → 108/108 pass. 신규 파일 9개(`src/calendar/*` 5개 + tests 2개 + mock 1개), 수정 4개(`manifest.json`, `service-worker.js`, `agent-guide.md` §3·§7, `01-calendar-view.md`). spec 01 `Status: shipped`. lecture-filter `additionalFilters` plug-in 슬롯이 spec 02·03·04 진입 시 시그니처 변경 없이 확장 가능. 라이브 환경 수동 검증은 사용자 백로그(B-3과 함께). §1·§5.3·§6(Round 2 진입 안내) 갱신.
+- **2026-04-30 spec 12 (자동 E2E 테스트 환경) 신설 + shipped**: Playwright + Chromium persistent context 기반. 5개 시나리오(B-1~B-4 + C polling) 자동 검증. `npm run test:e2e` 9.1초에 6/8 통과. 인프라가 spec 01 회귀 2건(GET_CALENDAR_EVENTS 응답 형식·`tabs` permission 누락) 자동 발견, B-7로 신설 차단. 신규 파일: `tests/e2e/{playwright.config.js,helpers/*,fixtures/*,pages/*,scenarios/*,AUTHORING.md}`, `.github/workflows/test.yml`, `docs/specs/12-test-automation.md`. 수정: `package.json` (devDep `@playwright/test`, scripts `test:e2e/test:e2e:install/test:all`), `CLAUDE.md` (명령어·실행 환경 섹션), `docs/specs/README.md` (도구 트랙 표 추가). src/·mock/·tests/unit/· tests/fixtures/site-current 미변경. §1·§2·§4(B-7 신설)·§3(T-12-1~3 신규 미해결) 갱신.
 - **2026-04-30 묶음 B+C 결정 5개 완료**: 백로그 단계 1. recommender(sonnet) 백그라운드 추천 + general-purpose(sonnet) 라이브 검증 자동 점검 6/6 ✅. AskUserQuestion 2회로 사용자 결정 수집 — 5개 모두 추천 채택 (U-08-1 A·U-09-1 C·U-10-2 B·U-02-2 A·U-04-2 B). spec 02·04·08·09·10 §3·§12 결정 반영, **spec 11 (자유 텍스트 검색) stub 신설**, README Phase 인덱스에 spec 11 추가 + spec 01·05 shipped 표기. §2 묶음 B·C 결정 완료 항목으로 이동. Round 2 진입 시 spec 코딩 차단 결정 모두 해소.
