@@ -1,0 +1,15 @@
+{
+  "kind": "calendar#events",
+  "etag": "\"e2e-fixture\"",
+  "summary": "primary",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "id": "evt-e2e-001",
+      "status": "confirmed",
+      "summary": "기존 미팅 (e2e fixture)",
+      "start": { "dateTime": "2099-04-30T10:00:00+09:00", "timeZone": "Asia/Seoul" },
+      "end":   { "dateTime": "2099-04-30T11:00:00+09:00", "timeZone": "Asia/Seoul" }
+    }
+  ]
+}
