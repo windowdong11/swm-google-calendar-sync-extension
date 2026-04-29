@@ -21,10 +21,12 @@ test("load anonymize.mjs", async () => {
 });
 
 test("masks Korean names in <td> cells with placeholder pool", () => {
-  const input = `<table><tr><td>홍길동</td><td>김철수</td></tr></table>`;
+  // Use raw names that are NOT in PLACEHOLDER_NAMES so the assertion is sound:
+  // placeholders themselves are preserved by design (idempotency).
+  const input = `<table><tr><td>김철수</td><td>박영희</td></tr></table>`;
   const out = anonymizeHtml(input);
-  assert.doesNotMatch(out, /홍길동/);
   assert.doesNotMatch(out, /김철수/);
+  assert.doesNotMatch(out, /박영희/);
   const seen = PLACEHOLDER_NAMES.filter((p) => out.includes(p));
   assert.ok(seen.length >= 1, `expected at least 1 placeholder, got: ${out}`);
 });
@@ -93,7 +95,8 @@ test("masks Korean phone numbers in multiple formats", () => {
 });
 
 test("deterministic: same raw name maps to same placeholder", () => {
-  const input = `<td>홍길동</td><td>홍길동</td><td>김철수</td><td>홍길동</td>`;
+  // Avoid PLACEHOLDER_NAMES values as raw input — those are kept as-is.
+  const input = `<td>김철수</td><td>김철수</td><td>박영희</td><td>김철수</td>`;
   const out = anonymizeHtml(input);
   const matches = [...out.matchAll(/<td>([^<]+)<\/td>/g)].map((m) => m[1]);
   assert.equal(matches.length, 4);
@@ -164,6 +167,21 @@ test("CLI exits with code 1 on unknown option", () => {
   });
   assert.equal(result.status, 1, `expected exit code 1, got ${result.status} (stderr: ${result.stderr})`);
   assert.match(result.stderr, /Unknown option/);
+});
+
+test("placeholder appearing in raw stays untouched and is not remapped", () => {
+  // raw "홍길동" coincides with a placeholder. Policy: preserve as-is so a
+  // second masking pass does not re-shuffle placeholders.
+  const input = `<td>홍길동</td><td>홍길동</td>`;
+  const out = anonymizeHtml(input);
+  assert.equal(out, input);
+});
+
+test("idempotent on synthetic input (placeholder + name + Hangul run)", () => {
+  const synthetic = `<div><td>김철수</td><td>홍길동 값</td><span>설명입니다</span></div>`;
+  const once = anonymizeHtml(synthetic);
+  const twice = anonymizeHtml(once);
+  assert.equal(once, twice, "anonymizeHtml must be idempotent on a second pass");
 });
 
 test("uuid sentinel does not collide with raw text containing 'UUID_PLACEHOLDER'", () => {

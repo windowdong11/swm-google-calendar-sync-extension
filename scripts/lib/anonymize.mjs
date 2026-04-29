@@ -39,7 +39,11 @@ const KOREAN_WHITELIST = new Set([
   "멘토", "멘티", "참가", "참여", "세미나", "워크숍", "온라인", "오프라인"
 ]);
 
-const HANGUL_NAME_RE = /[가-힣]{2,4}/g;
+// Match the FULL Hangul run (≥2 chars). Using a greedy run rather than {2,4}
+// avoids the failure mode where a 5-char raw like "설명입니다" gets sliced into
+// "설명입니" (4 chars masked to a 3-char placeholder) leaving the trailing "다"
+// to fuse with the placeholder into a new Hangul token on the next pass.
+const HANGUL_NAME_RE = /[가-힣]{2,}/g;
 const LONG_DIGIT_RE = /\b\d{7,}\b/g;
 const EMAIL_RE = /[\w.+-]+@[\w.-]+\.\w{2,}/g;
 const PHONE_RE = /\b01[016789][- ]?\d{3,4}[- ]?\d{4}\b/g;
@@ -88,11 +92,59 @@ function maskHrefAttributes(html) {
   });
 }
 
+// Sentinel suffix is a unique 4-hex chosen to have ~zero collision probability
+// with raw HTML. Used by both UUID and name protection paths.
+const NAME_SENTINEL_PREFIX = "__SOMA_NAME_SENTINEL_";
+const NAME_SENTINEL_SUFFIX = "_a3b1__";
+
+function nameSentinel(idx) {
+  return `${NAME_SENTINEL_PREFIX}${idx}${NAME_SENTINEL_SUFFIX}`;
+}
+
+const NAME_SENTINEL_RE = new RegExp(
+  `${NAME_SENTINEL_PREFIX}(\\d+)${NAME_SENTINEL_SUFFIX}`,
+  "g"
+);
+
+const PLACEHOLDER_NAMES_SET = new Set(PLACEHOLDER_NAMES);
+
+// Skip masking when the matched name appears as part of a longer Hangul token
+// that includes a whitelisted term. Catches compounds like "강의시작",
+// "사이트현재" that would otherwise be re-split by the Hangul regex.
+function isInsideWhitelistedCompound(text, matchStart, matchEnd) {
+  let left = matchStart;
+  while (left > 0 && /[가-힣]/.test(text[left - 1])) left -= 1;
+  let right = matchEnd;
+  while (right < text.length && /[가-힣]/.test(text[right])) right += 1;
+  if (left === matchStart && right === matchEnd) return false;
+  const compound = text.slice(left, right);
+  if (KOREAN_WHITELIST.has(compound)) return true;
+  for (const term of KOREAN_WHITELIST) {
+    if (term.length >= 2 && compound.includes(term)) return true;
+  }
+  return false;
+}
+
+function matchContainsWhitelistedTerm(match) {
+  if (KOREAN_WHITELIST.has(match)) return true;
+  for (const term of KOREAN_WHITELIST) {
+    if (term.length >= 2 && match.includes(term)) return true;
+  }
+  return false;
+}
+
 function buildNameMapper() {
   const cache = new Map();
+  // Maps sentinel index -> placeholder Hangul, restored after all masking.
+  const sentinelToPlaceholder = new Map();
   let counter = 0;
-  return function mapName(raw) {
+  let sentinelCounter = 0;
+
+  function mapName(raw) {
     if (KOREAN_WHITELIST.has(raw)) return raw;
+    // Existing placeholders flowing in from a prior anonymize pass must remain
+    // stable — otherwise idempotency is broken by round-robin reassignment.
+    if (PLACEHOLDER_NAMES_SET.has(raw)) return raw;
     if (cache.has(raw)) return cache.get(raw);
     // Round-robin pool, but skip a placeholder that would equal the raw name
     // (e.g. raw "홍길동" must not stay as "홍길동" — defeats anonymization).
@@ -104,11 +156,37 @@ function buildNameMapper() {
     counter += 1;
     cache.set(raw, placeholder);
     return placeholder;
-  };
+  }
+
+  function reserveSentinel(placeholder) {
+    const idx = sentinelCounter;
+    sentinelCounter += 1;
+    sentinelToPlaceholder.set(String(idx), placeholder);
+    return nameSentinel(idx);
+  }
+
+  function restore(html) {
+    return html.replace(NAME_SENTINEL_RE, (full, idx) => {
+      const replacement = sentinelToPlaceholder.get(idx);
+      return replacement === undefined ? full : replacement;
+    });
+  }
+
+  return { mapName, reserveSentinel, restore };
 }
 
-function maskKoreanNames(segment, mapName) {
-  return segment.replace(HANGUL_NAME_RE, (match) => mapName(match));
+function maskKoreanNamesInText(text, mapper) {
+  return text.replace(HANGUL_NAME_RE, (match, offset) => {
+    if (isInsideWhitelistedCompound(text, offset, offset + match.length)) {
+      return match;
+    }
+    if (matchContainsWhitelistedTerm(match)) return match;
+    const mapped = mapper.mapName(match);
+    if (mapped === match) return match;
+    // Wrap mapped placeholder in a sentinel so subsequent passes (or a second
+    // call) cannot re-match it as a Hangul name.
+    return mapper.reserveSentinel(mapped);
+  });
 }
 
 function processSegmentsOutsideSkipTags(html, transform) {
@@ -129,10 +207,10 @@ function processSegmentsOutsideSkipTags(html, transform) {
 
 // Mask Korean names only inside text nodes (between > and <) so we never
 // touch tag/attribute names or class lists.
-function maskNamesInTextNodes(html, mapName) {
+function maskNamesInTextNodes(html, mapper) {
   return html.replace(/>([^<]*)</g, (full, text) => {
     if (!text || !/[가-힣]/.test(text)) return full;
-    return `>${maskKoreanNames(text, mapName)}<`;
+    return `>${maskKoreanNamesInText(text, mapper)}<`;
   });
 }
 
@@ -171,12 +249,12 @@ export function anonymizeHtml(html, opts = {}) {
   }
   void opts; // profile not yet used — reserved for future per-page tweaks.
 
-  const mapName = buildNameMapper();
+  const mapper = buildNameMapper();
 
   // Sentinel keeps the placeholder UUID safe from later digit/email passes.
   const UUID_SENTINEL = "__SOMA_UUID_SENTINEL_7f3a__";
 
-  return processSegmentsOutsideSkipTags(html, (segment) => {
+  const transformed = processSegmentsOutsideSkipTags(html, (segment) => {
     let s = segment;
     // Order matters: csrf/UUID first → swap to sentinel so the placeholder
     // UUID's digit blocks aren't re-masked by later passes.
@@ -185,10 +263,11 @@ export function anonymizeHtml(html, opts = {}) {
     s = s.replace(PHONE_RE, PLACEHOLDER_PHONE);
     s = s.replace(EMAIL_RE, PLACEHOLDER_EMAIL);
     s = s.replace(LONG_DIGIT_RE, PLACEHOLDER_LONG_DIGIT);
-    s = maskNamesInTextNodes(s, mapName);
+    s = maskNamesInTextNodes(s, mapper);
     s = s.split(UUID_SENTINEL).join(PLACEHOLDER_UUID);
     return s;
   });
+  return mapper.restore(transformed);
 }
 
 /**
