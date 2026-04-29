@@ -15,6 +15,10 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
+### 2026-04-30 spec 05 라이브 회귀 fix (menuNo=200046)
+
+**D-05-2 해소** — `fix/spec-05-list-url-menuno` 1 커밋: SoMA list.do가 querystring `?menuNo=200046` 없으면 page-not-found으로 redirect. `src/background/swm-fetch.js` LIST_URL에 쿼리스트링 추가. 회귀 테스트 추가.
+
 ### 2026-04-30 B-7 fix 완료 (spec 01 회귀)
 
 **B-7 spec 01 회귀 2건 fix** — `fix/spec-01-regressions` 3 커밋(a3e15ae·86617c1·1675f1c) → 사실 반영만:
@@ -173,6 +177,7 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 - **현재 상태**:
   - `tests/fixtures/site-current/list.html`(17KB) 분석으로 **컬럼 구조 확정**: NO·제목·접수기간·진행날짜·모집인원·개설승인·상태·작성자·등록일
   - 카테고리 컬럼 없음(spec 02는 상세 의존), 멘토명=작성자(spec 03), 정원=모집인원(spec 04·06·10) 노출 ✓
+  - **list.do URL 쿼리스트링 확정**(2026-04-30): `?menuNo=200046` 필수. 누락 시 page-not-found 리다이렉트.
 - **남은 부분**: 신청수(applyCnt) 노출 여부 — list.do에 별도 컬럼 없음. 상세 페이지에서만 보일 가능성 (B-2와 묶임)
 - **워크플로우 정착**: 사용자가 더 새로운 raw 캡처가 필요하면 `.agent/raw/`에 저장 → `npm run refresh:fixtures` 실행 → `tests/fixtures/site-current/` 또는 `mock/` 갱신. `docs/agent-troubleshooting/refresh-fixtures.md` 가이드 참조.
 
@@ -198,6 +203,10 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 ### B-4 (선택) Chrome OS 알림 권한 동작 확인
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
+
+### B-9 ✅ 해소 (2026-04-30)
+
+**spec 05 라이브 회귀 (lectures empty)** — `fix/spec-05-list-url-menuno` 1 커밋. 원인: list.do가 `?menuNo=200046` 없이 404 리다이렉트. swm-fetch.js LIST_URL 수정 + 회귀 테스트.
 
 ### B-7 ✅ 해소 (2026-04-30)
 
@@ -405,6 +414,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 9. 변경 이력
 
+- **2026-04-30 D-05-2 ✅ 해소 + B-9 신규 해소**: spec 05 라이브 회귀 — list.do URL 쿼리스트링 `?menuNo=200046` 추가 필요. `fix/spec-05-list-url-menuno` 1 커밋 수정 + 회귀 테스트. §1 직전 세션·§4 B-1·B-9 항목 갱신.
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
 - 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 작업 순서 05 → 01로 변경. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
 - 2026-04-29: §2를 묶음 A~E 구조로 재편(차단성 🛑/⏸️/✅ 분류 추가), §5를 라운드 단위로 재배치(Round 0~3 + 의존성 그래프 + 타임라인 + 병렬 효율 룰 + 함정 포인트), §6 권장 시퀀스를 Round 0 진입 형태로 갱신, **§7 작업 모드 신설**(code-delegate + worktree 병렬, 토큰 절약 룰, 안티패턴), §8/§9 번호 시프트.

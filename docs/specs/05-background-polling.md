@@ -9,7 +9,7 @@
 >
 > **후속 PR로 분리된 항목**:
 > - 옵션 UI (`pollingSettings.enabled` 토글·주기·범위·상태 표시·수동 폴링 버튼) — 묶음 E(U-05-1, U-05-2) 결정 후
-> - 라이브 fetch URL 쿼리스트링(D-05-2: `srchStrtDt` 등 키 미명시) — B-1 raw 캡처 후
+> - ✅ **라이브 fetch URL 쿼리스트링 확정**(2026-04-30): `/sw/mypage/mentoLec/list.do?menuNo=200046` 필수. (D-05-2 해소)
 > - 라이브 환경 smoke test — 사용자 unpacked 로드 + service worker 콘솔에서 `chrome.storage.sync.set({pollingSettings:{enabled:true,...}})` + `chrome.runtime.sendMessage({type:'POLLING_TRIGGER_NOW'})` → `lectureSnapshot.lectures.length > 0` 확인
 
 ## 1. 목적
