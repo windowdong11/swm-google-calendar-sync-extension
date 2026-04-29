@@ -1,0 +1,399 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  background: #f8f9fa;
+  color: #212529;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.cal-header-left,
+.cal-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-view-toggle {
+  display: flex;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.cal-view-toggle button {
+  padding: 4px 12px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.cal-view-toggle button.active {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.cal-view-toggle button:not(.active):hover {
+  background: #e9ecef;
+}
+
+#btn-prev, #btn-next {
+  padding: 4px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+}
+
+#btn-prev:hover, #btn-next:hover {
+  background: #e9ecef;
+}
+
+.cal-period-label {
+  font-weight: 600;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.cal-last-updated {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+#btn-refresh {
+  padding: 4px 10px;
+  border: 1px solid #0d6efd;
+  border-radius: 4px;
+  background: #fff;
+  color: #0d6efd;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+#btn-refresh:hover {
+  background: #e7f1ff;
+}
+
+.cal-options-link {
+  font-size: 12px;
+  color: #6c757d;
+  text-decoration: none;
+}
+
+.cal-options-link:hover {
+  text-decoration: underline;
+}
+
+/* ── Body (grid + side panel) ── */
+.cal-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.cal-grid-container {
+  flex: 7;
+  overflow: auto;
+  position: relative;
+}
+
+/* ── Month grid ── */
+.cal-grid.month-mode {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  border-top: 1px solid #dee2e6;
+  border-left: 1px solid #dee2e6;
+}
+
+.cal-grid.month-mode .cal-col-header {
+  padding: 6px;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  background: #f8f9fa;
+}
+
+.cal-grid.month-mode .cal-month-cell {
+  min-height: 80px;
+  padding: 4px;
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  vertical-align: top;
+  position: relative;
+  cursor: default;
+}
+
+.cal-month-cell.other-month {
+  background: #f8f9fa;
+  color: #adb5bd;
+}
+
+.cal-month-cell.today {
+  background: #fff8e1;
+}
+
+.cal-month-cell-date {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+/* ── Week grid ── */
+.cal-grid.week-mode {
+  display: grid;
+  grid-template-columns: 48px repeat(7, 1fr);
+  border-left: 1px solid #dee2e6;
+  border-top: 1px solid #dee2e6;
+  position: relative;
+}
+
+.cal-time-axis {
+  grid-column: 1;
+  grid-row: 2 / span 100;
+  position: relative;
+}
+
+.cal-col-header {
+  padding: 6px 4px;
+  text-align: center;
+  font-weight: 600;
+  border-right: 1px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.cal-col-header.today-header {
+  color: #0d6efd;
+}
+
+/* Week day columns */
+.cal-week-col {
+  position: relative;
+  border-right: 1px solid #dee2e6;
+  min-height: 960px; /* 16h × 60px/h */
+}
+
+.cal-week-col.today-col {
+  background: #fffde7;
+}
+
+/* Hour lines */
+.cal-hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #f0f0f0;
+  pointer-events: none;
+}
+
+.cal-hour-label {
+  position: absolute;
+  right: 4px;
+  font-size: 10px;
+  color: #6c757d;
+  transform: translateY(-50%);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ── Event blocks ── */
+.cal-event {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  overflow: hidden;
+  cursor: pointer;
+  background: #cce5ff;
+  border-left: 3px solid #0d6efd;
+  color: #003d80;
+  z-index: 1;
+  user-select: none;
+}
+
+.cal-event:hover {
+  filter: brightness(0.95);
+}
+
+.cal-event.soma-managed {
+  background: #d4edda;
+  border-left-color: #28a745;
+  color: #155724;
+}
+
+.cal-event-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Month event pill */
+.cal-month-event {
+  display: block;
+  padding: 1px 4px;
+  margin-bottom: 2px;
+  border-radius: 2px;
+  font-size: 11px;
+  background: #cce5ff;
+  color: #003d80;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.cal-month-event.soma-managed {
+  background: #d4edda;
+  color: #155724;
+}
+
+/* ── Drag overlay ── */
+.cal-drag-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: rgba(13, 110, 253, 0.15);
+  border: 1px dashed #0d6efd;
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Side panel ── */
+.cal-side-panel {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #dee2e6;
+  background: #fff;
+  overflow: hidden;
+}
+
+.side-panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.side-drag-label {
+  font-weight: 600;
+  font-size: 13px;
+  color: #495057;
+}
+
+.side-clear-btn {
+  padding: 2px 8px;
+  border: 1px solid #6c757d;
+  border-radius: 4px;
+  background: #fff;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.side-clear-btn:hover {
+  background: #f8f9fa;
+}
+
+.side-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+/* Lecture card */
+.lecture-card {
+  padding: 10px 12px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.lecture-card:hover {
+  border-color: #0d6efd;
+  background: #f0f7ff;
+}
+
+.lecture-card:focus {
+  outline: 2px solid #0d6efd;
+  outline-offset: 1px;
+}
+
+.lecture-card-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.lecture-card-time {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.lecture-card-status {
+  font-size: 12px;
+  color: #495057;
+  margin-top: 2px;
+}
+
+/* Sidebar messages */
+.side-empty-msg {
+  padding: 20px 12px;
+  color: #6c757d;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* Calendar error/auth messages */
+.cal-message {
+  padding: 20px;
+  color: #721c24;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  margin: 16px;
+}
+
+/* ── Week footer ── */
+.cal-week-footer {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: #6c757d;
+  border-top: 1px solid #dee2e6;
+  background: #fff;
+  flex-shrink: 0;
+}

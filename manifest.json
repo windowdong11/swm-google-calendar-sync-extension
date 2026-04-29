@@ -23,7 +23,8 @@
     "default_icon": {
       "16": "icons/image.png",
       "32": "icons/image.png"
-    }
+    },
+    "default_title": "SOMA 캘린더 열기"
   },
   "content_scripts": [
     {

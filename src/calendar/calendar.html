@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>SOMA 캘린더</title>
+    <link rel="stylesheet" href="calendar.css" />
+  </head>
+  <body>
+    <header class="cal-header">
+      <div class="cal-header-left">
+        <div class="cal-view-toggle">
+          <button id="btn-view-month" type="button">월</button>
+          <button id="btn-view-week" type="button" class="active">주</button>
+        </div>
+        <button id="btn-prev" type="button">&#8249;</button>
+        <button id="btn-next" type="button">&#8250;</button>
+        <span id="lbl-period" class="cal-period-label"></span>
+      </div>
+      <div class="cal-header-right">
+        <span id="lbl-last-updated" class="cal-last-updated"></span>
+        <button id="btn-refresh" type="button">지금 갱신</button>
+        <a id="link-options" href="#" class="cal-options-link">옵션 열기</a>
+      </div>
+    </header>
+
+    <div class="cal-body">
+      <main id="cal-grid-container" class="cal-grid-container">
+        <div id="cal-grid" class="cal-grid"></div>
+        <div id="cal-auth-error" class="cal-message cal-auth-error" hidden>
+          Google Calendar에 접근할 수 없습니다. 확장 옵션에서 권한을 확인하세요.
+        </div>
+      </main>
+
+      <aside id="cal-side-panel" class="cal-side-panel">
+        <div class="side-panel-header">
+          <span id="lbl-drag-range" class="side-drag-label">전체 미신청 특강</span>
+          <button id="btn-clear-drag" type="button" class="side-clear-btn" hidden>해제</button>
+        </div>
+        <div id="side-panel-body" class="side-panel-body"></div>
+      </aside>
+    </div>
+
+    <div id="cal-week-footer" class="cal-week-footer" hidden>
+      <span id="lbl-out-of-range"></span>
+    </div>
+
+    <script type="module" src="calendar-view.js"></script>
+    <script type="module" src="calendar.js"></script>
+  </body>
+</html>
