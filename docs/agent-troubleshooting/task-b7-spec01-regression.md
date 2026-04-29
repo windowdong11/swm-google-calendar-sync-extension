@@ -1,9 +1,20 @@
 # Task B-7: spec 01 라이브 회귀 2건 fix
 
 > Status: open · 차단: 🛑 spec 12 두 시나리오·라이브 사용자 흐름
-> Branch: `fix/spec-01-regressions`
+> Branch: `fix/spec-01-regressions` (main에서 cut)
 > 발견: 2026-04-30, spec 12 자동 검증
 > 예상 작업: 30~60분 (단발 fix)
+
+## 0. 세션 분리 운영 메모
+
+본 task는 **B-8과 별도 세션에서 독립 진행**하도록 설계됨.
+
+- **선행 조건**: spec 12 (`feature/12-test-automation`) 가 **main에 머지된 후** 진입. 미머지 상태면 진입 세션이 먼저 spec 12 머지를 처리하거나, 그 브랜치 위에 cut 후 spec 12와 같이 머지.
+- **B-8(`fix/e2e-headless-sw-timeout`)과의 충돌 영역**: 없음.
+  - 본 task: `src/calendar/calendar-view.js`, `manifest.json`, `tests/unit/calendar-view.test.js`, `tests/e2e/scenarios/b1-toolbar.spec.js`, `b2-calendar.spec.js`
+  - B-8: `tests/e2e/helpers/launch.js`, (선택) `tests/e2e/playwright.config.js`, `.github/workflows/test.yml`
+  - → worktree 병렬 또는 시간차 순차 모두 안전. 어느 task가 먼저 머지되어도 다른 쪽 rebase 비용 0.
+- **권장 순서**: 본 task(B-7)를 먼저 머지. B-7 해소 후 e2e 8/8 활성 → B-8 세션이 HEADLESS=1에서 8/8 동작을 목표로 진행 가능.
 
 ## 1. 발견 경위
 

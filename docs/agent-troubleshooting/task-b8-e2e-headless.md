@@ -1,9 +1,20 @@
 # Task B-8: E2E HEADLESS=1 모드 service worker timeout fix
 
 > Status: open · 차단: ⏸️ HEADLESS 모드(CI·백그라운드)에서만 fail. 헤드풀은 정상.
-> Branch: `fix/e2e-headless-sw-timeout`
+> Branch: `fix/e2e-headless-sw-timeout` (main에서 cut)
 > 발견: 2026-04-30, Claude Code Bash 환경에서 `HEADLESS=1 npm run test:e2e` 실행 시
 > 예상 작업: 30~60분 (단발 fix, 수정 옵션 비교 후 1~2개 적용)
+
+## 0. 세션 분리 운영 메모
+
+본 task는 **B-7과 별도 세션에서 독립 진행**하도록 설계됨.
+
+- **선행 조건**: spec 12 (`feature/12-test-automation`) 가 **main에 머지된 후** 진입. 미머지 상태면 진입 세션이 먼저 spec 12 머지를 처리하거나, 그 브랜치 위에 cut 후 spec 12와 같이 머지.
+- **B-7(`fix/spec-01-regressions`)과의 충돌 영역**: 없음.
+  - 본 task: `tests/e2e/helpers/launch.js`, (선택) `tests/e2e/playwright.config.js`, `.github/workflows/test.yml`
+  - B-7: `src/calendar/calendar-view.js`, `manifest.json`, `tests/unit/calendar-view.test.js`, `tests/e2e/scenarios/b1-toolbar.spec.js`, `b2-calendar.spec.js`
+  - → worktree 병렬 또는 시간차 순차 모두 안전. 어느 task가 먼저 머지되어도 다른 쪽 rebase 비용 0.
+- **권장 순서**: B-7 머지 후 본 task 진입 시 `HEADLESS=1` 8/8 활성을 직접 검증 가능. B-7 미머지 상태로 본 task만 진행해도 6/8 활성(B-7 차단 2개는 skip 유지)으로 검증 가능.
 
 ## 1. 증상
 
