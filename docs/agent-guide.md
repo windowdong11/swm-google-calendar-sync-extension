@@ -31,6 +31,11 @@ SOMA Schedule Helper는 소프트웨어 마에스트로(SWM/SoMA) 특강 페이�
 - `src/content/lecture-status.js`: 공통 시간 정규화, 충돌 판정, 접수내역 수집 헬퍼, 배지/패널 UI 생성
 - `src/options/options.html`: 확장프로그램 설정 화면
 - `src/options/options.js`: 설정 로드/저장 로직
+- `src/calendar/calendar.html`: 확장 아이콘 클릭으로 열리는 캘린더 뷰 페이지 (SoMA DOM과 무관한 독립 페이지)
+- `src/calendar/calendar.js`: 캘린더 페이지 부트스트랩 — storage·메시지 구독, 뷰 전환, 드래그 인터랙션
+- `src/calendar/calendar-view.js`: 주간/월간 그리드 및 사이드 패널 렌더 함수 (DOM 직접 조작, chrome API 의존 없음)
+- `src/calendar/lecture-filter.js`: `filterLecturesForPanel(lectures, dragRange, now)` 순수 함수
+- `mock/calendar.html`: 더미 Google Calendar 이벤트 + lectureSnapshot 주입 수동 확인 fixture
 - `mock/`, `example/`: SWM 페이지 구조를 흉내 낸 수동 확인용 fixture
 
 ## 4. 페이지별 기능

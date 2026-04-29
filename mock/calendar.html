@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>mock calendar (더미 데이터)</title>
+    <link rel="stylesheet" href="../src/calendar/calendar.css" />
+    <script>
+      // ── chrome API mock ───────────────────────────────────────────────────
+      (function () {
+        const NOW_STR = "2026-05-13T12:00:00+09:00"; // 수요일 정오
+
+        // 더미 lectureSnapshot
+        const DUMMY_SNAPSHOT = {
+          takenAt: NOW_STR,
+          rangeStart: "2026-05-01T00:00:00+09:00",
+          rangeEnd: "2026-05-31T23:59:59+09:00",
+          lectures: [
+            {
+              id: "L001",
+              title: "[특강A] AI 에이전트 실무",
+              startAt: "2026-05-13T14:00:00+09:00",
+              endAt: "2026-05-13T16:00:00+09:00",
+              url: "https://www.swmaestro.ai/sw/mypage/mentoLec/view.do?qustnrSn=L001",
+              statusText: "접수중 (잔여 5석)"
+            },
+            {
+              id: "L002",
+              title: "[특강B] 클라우드 아키텍처 설계",
+              startAt: "2026-05-14T10:00:00+09:00",
+              endAt: "2026-05-14T12:00:00+09:00",
+              url: "https://www.swmaestro.ai/sw/mypage/mentoLec/view.do?qustnrSn=L002",
+              statusText: "접수중 (잔여 12석)"
+            },
+            {
+              id: "L003",
+              title: "[특강C] 데이터 파이프라인",
+              startAt: "2026-05-15T13:00:00+09:00",
+              endAt: "2026-05-15T15:00:00+09:00",
+              url: "https://www.swmaestro.ai/sw/mypage/mentoLec/view.do?qustnrSn=L003",
+              statusText: "접수중 (잔여 3석)"
+            },
+            {
+              id: "L004",
+              title: "[특강D] 이미 종료된 특강 (필터 확인용)",
+              startAt: "2026-05-10T09:00:00+09:00",
+              endAt: "2026-05-10T11:00:00+09:00",
+              url: "https://www.swmaestro.ai/sw/mypage/mentoLec/view.do?qustnrSn=L004",
+              statusText: "종료"
+            }
+          ]
+        };
+
+        // 더미 Google Calendar 이벤트
+        const DUMMY_EVENTS = [
+          {
+            id: "ev1",
+            summary: "팀 미팅",
+            start: { dateTime: "2026-05-11T10:00:00+09:00" },
+            end: { dateTime: "2026-05-11T11:00:00+09:00" },
+            htmlLink: "https://calendar.google.com"
+          },
+          {
+            id: "ev2",
+            summary: "[SoMA] AI 에이전트 실무 (신청 완료)",
+            start: { dateTime: "2026-05-13T14:00:00+09:00" },
+            end: { dateTime: "2026-05-13T16:00:00+09:00" },
+            htmlLink: "https://calendar.google.com",
+            extendedProperties: { private: { somaManaged: "1", somaQustnrSn: "L001" } }
+          },
+          {
+            id: "ev3",
+            summary: "야간 스터디 (자정 넘김)",
+            start: { dateTime: "2026-05-12T22:00:00+09:00" },
+            end: { dateTime: "2026-05-13T01:00:00+09:00" },
+            htmlLink: "https://calendar.google.com"
+          },
+          {
+            id: "ev4",
+            summary: "새벽 운동 (시간축 밖)",
+            start: { dateTime: "2026-05-13T06:00:00+09:00" },
+            end: { dateTime: "2026-05-13T07:30:00+09:00" },
+            htmlLink: "https://calendar.google.com"
+          }
+        ];
+
+        const LOCAL_STORE = {
+          lectureSnapshot: DUMMY_SNAPSHOT,
+          pollingState: {
+            lastPolledAt: NOW_STR,
+            lastSuccessAt: NOW_STR,
+            lastError: null,
+            consecutiveFailures: 0,
+            pausedReason: null
+          },
+          calendarViewMode: "week",
+          calendarAnchorDate: new Date(NOW_STR).toISOString()
+        };
+
+        const onChangedListeners = [];
+
+        window.chrome = {
+          runtime: {
+            getURL: (path) => path,
+            sendMessage: async (msg) => {
+              if (msg.type === "GET_CALENDAR_EVENTS") {
+                console.log("[mock] GET_CALENDAR_EVENTS", msg.payload);
+                return { ok: true, events: DUMMY_EVENTS };
+              }
+              if (msg.type === "POLLING_TRIGGER_NOW") {
+                console.log("[mock] POLLING_TRIGGER_NOW");
+                LOCAL_STORE.lectureSnapshot = { ...DUMMY_SNAPSHOT, takenAt: new Date().toISOString() };
+                return { ok: true };
+              }
+              return { ok: false, error: "unknown" };
+            }
+          },
+          storage: {
+            local: {
+              get: async (keys) => {
+                if (typeof keys === "string") return { [keys]: LOCAL_STORE[keys] };
+                if (Array.isArray(keys)) {
+                  const out = {};
+                  keys.forEach((k) => { out[k] = LOCAL_STORE[k]; });
+                  return out;
+                }
+                return { ...LOCAL_STORE };
+              },
+              set: async (payload) => {
+                const changes = {};
+                Object.entries(payload).forEach(([k, v]) => {
+                  changes[k] = { oldValue: LOCAL_STORE[k], newValue: v };
+                  LOCAL_STORE[k] = v;
+                });
+                onChangedListeners.forEach((fn) => fn(changes, "local"));
+              }
+            },
+            onChanged: {
+              addListener: (fn) => onChangedListeners.push(fn)
+            }
+          },
+          windows: {
+            update: async () => {}
+          }
+        };
+      })();
+    </script>
+  </head>
+  <body>
+    <p style="background:#fffbe6;padding:8px;margin:0;font-size:12px;">
+      [mock] 더미 Google Calendar 이벤트 + lectureSnapshot 주입. 드래그로 사이드 패널 필터 확인.
+    </p>
+
+    <header class="cal-header">
+      <div class="cal-header-left">
+        <div class="cal-view-toggle">
+          <button id="btn-view-month" type="button">월</button>
+          <button id="btn-view-week" type="button" class="active">주</button>
+        </div>
+        <button id="btn-prev" type="button">&#8249;</button>
+        <button id="btn-next" type="button">&#8250;</button>
+        <span id="lbl-period" class="cal-period-label"></span>
+      </div>
+      <div class="cal-header-right">
+        <span id="lbl-last-updated" class="cal-last-updated"></span>
+        <button id="btn-refresh" type="button">지금 갱신</button>
+        <a id="link-options" href="#" class="cal-options-link">옵션 열기</a>
+      </div>
+    </header>
+
+    <div class="cal-body">
+      <main id="cal-grid-container" class="cal-grid-container">
+        <div id="cal-grid" class="cal-grid"></div>
+        <div id="cal-auth-error" class="cal-message cal-auth-error" hidden>
+          Google Calendar에 접근할 수 없습니다. 확장 옵션에서 권한을 확인하세요.
+        </div>
+      </main>
+
+      <aside id="cal-side-panel" class="cal-side-panel">
+        <div class="side-panel-header">
+          <span id="lbl-drag-range" class="side-drag-label">전체 미신청 특강</span>
+          <button id="btn-clear-drag" type="button" class="side-clear-btn" hidden>해제</button>
+        </div>
+        <div id="side-panel-body" class="side-panel-body"></div>
+      </aside>
+    </div>
+
+    <div id="cal-week-footer" class="cal-week-footer" hidden>
+      <span id="lbl-out-of-range"></span>
+    </div>
+
+    <script src="../src/calendar/calendar-view.js"></script>
+    <script src="../src/calendar/lecture-filter.js"></script>
+    <script src="../src/calendar/calendar.js"></script>
+  </body>
+</html>
