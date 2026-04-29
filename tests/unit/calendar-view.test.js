@@ -32,6 +32,10 @@ function makeEvent(summary, startISO, endISO, extra = {}) {
   };
 }
 
+function makeFlatEvent(title, startAt, endAt, extra = {}) {
+  return { title, startAt, endAt, ...extra };
+}
+
 function makeGridEl() {
   const dom = new JSDOM("<!DOCTYPE html><div id='cal-grid'></div>");
   return dom.window.document.getElementById("cal-grid");
@@ -203,6 +207,75 @@ test("renderWeekGrid: 시간축 밖 이벤트는 outOfRangeCount 반영", () => 
   assert.ok(outOfRangeCount >= 1, "시간축 밖 이벤트는 outOfRangeCount에 포함되어야 한다");
   const gridBlocks = gridEl.querySelectorAll(".cal-event");
   assert.equal(gridBlocks.length, 0, "시간축 밖 이벤트는 그리드에 블록을 남기지 않는다");
+});
+
+// ── 평면 형식 fallback ─────────────────────────────────────────────────────
+
+test("splitEventByDay: 평면 형식(startAt/endAt)으로 자정 넘는 이벤트 분할", () => {
+  // KST 2026-05-10 22:00 ~ 2026-05-11 02:00
+  const ev = makeFlatEvent("야간 강의", "2026-05-10T22:00:00+09:00", "2026-05-11T02:00:00+09:00");
+  const segs = splitEventByDay(ev);
+  assert.equal(segs.length, 2);
+  assert.equal(segs[0].dateStr, "2026-05-10");
+  assert.equal(segs[1].dateStr, "2026-05-11");
+});
+
+test("splitEventByDay: 평면 형식 같은 날 이벤트는 분할 없음", () => {
+  const ev = makeFlatEvent("낮 강의", "2026-05-10T10:00:00+09:00", "2026-05-10T12:00:00+09:00");
+  const segs = splitEventByDay(ev);
+  assert.equal(segs.length, 1);
+  assert.equal(segs[0].dateStr, "2026-05-10");
+});
+
+test("isSomaManaged: isSomaLecture=true 평면 이벤트는 true", () => {
+  const ev = makeFlatEvent("소마 특강", "2026-05-10T10:00:00+09:00", "2026-05-10T12:00:00+09:00", { isSomaLecture: true });
+  assert.equal(isSomaManaged(ev), true);
+});
+
+test("isSomaManaged: isSomaLecture=false 평면 이벤트는 false", () => {
+  const ev = makeFlatEvent("일반 일정", "2026-05-10T10:00:00+09:00", "2026-05-10T11:00:00+09:00", { isSomaLecture: false });
+  assert.equal(isSomaManaged(ev), false);
+});
+
+test("isSomaManaged: isSomaLecture 없는 평면 이벤트는 false", () => {
+  const ev = makeFlatEvent("일반 일정", "2026-05-10T10:00:00+09:00", "2026-05-10T11:00:00+09:00");
+  assert.equal(isSomaManaged(ev), false);
+});
+
+test("isOutOfWeekRange: 평면 형식 KST 06:00 이벤트는 시간축(08:00~24:00) 밖", () => {
+  const ev = makeFlatEvent("새벽 이벤트", "2026-05-10T06:00:00+09:00", "2026-05-10T07:00:00+09:00");
+  assert.equal(isOutOfWeekRange(ev, "2026-05-10"), true);
+});
+
+test("isOutOfWeekRange: 평면 형식 KST 10:00 이벤트는 시간축 내", () => {
+  const ev = makeFlatEvent("낮 이벤트", "2026-05-10T10:00:00+09:00", "2026-05-10T11:00:00+09:00");
+  assert.equal(isOutOfWeekRange(ev, "2026-05-10"), false);
+});
+
+test("renderWeekGrid: 평면 형식 isSomaLecture 이벤트에 soma-managed 클래스 부여", () => {
+  const gridEl = makeGridEl();
+  const events = [
+    makeFlatEvent("일반 일정", "2026-05-10T10:00:00+09:00", "2026-05-10T11:00:00+09:00"),
+    makeFlatEvent("소마 특강", "2026-05-12T10:00:00+09:00", "2026-05-12T12:00:00+09:00", { isSomaLecture: true })
+  ];
+  const anchor = new Date("2026-05-13T00:00:00+09:00");
+  renderWeekGrid(gridEl, anchor, events);
+
+  const somaBlocks = gridEl.querySelectorAll(".cal-event.soma-managed");
+  assert.equal(somaBlocks.length, 1, "isSomaLecture 이벤트에 soma-managed 클래스가 부여되어야 한다");
+  const allBlocks = gridEl.querySelectorAll(".cal-event");
+  assert.equal(allBlocks.length, 2, "이벤트 블록 2개가 렌더되어야 한다");
+});
+
+test("renderWeekGrid: 평면 형식 이벤트 title이 블록에 렌더됨", () => {
+  const gridEl = makeGridEl();
+  const events = [makeFlatEvent("평면 특강", "2026-05-12T10:00:00+09:00", "2026-05-12T12:00:00+09:00")];
+  const anchor = new Date("2026-05-13T00:00:00+09:00");
+  renderWeekGrid(gridEl, anchor, events);
+
+  const titleEl = gridEl.querySelector(".cal-event-title");
+  assert.ok(titleEl, "제목 요소가 존재해야 한다");
+  assert.equal(titleEl.textContent, "평면 특강");
 });
 
 // ── renderSidePanel ────────────────────────────────────────────────────────

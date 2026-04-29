@@ -63,8 +63,8 @@ function calcEventPosition(startMs, endMs, dayStartMs) {
  * 자정을 넘는 이벤트를 날짜별로 분할하여 [{dateStr, startMs, endMs}] 배열 반환.
  */
 function splitEventByDay(event) {
-  const startMs = new Date(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
-  const endMs = new Date(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
+  const startMs = new Date(event.startAt || event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
+  const endMs = new Date(event.endAt || event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
 
   const segments = [];
   let curMs = startMs;
@@ -88,8 +88,8 @@ function isOutOfWeekRange(event, dateStr) {
   const viewStartMs = dayStartMs + WEEK_START_HOUR * 3600 * 1000;
   const viewEndMs = dayStartMs + WEEK_END_HOUR * 3600 * 1000;
 
-  const startMs = new Date(event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
-  const endMs = new Date(event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
+  const startMs = new Date(event.startAt || event.start.dateTime || event.start.date + "T00:00:00+09:00").getTime();
+  const endMs = new Date(event.endAt || event.end.dateTime || event.end.date + "T00:00:00+09:00").getTime();
 
   return endMs <= viewStartMs || startMs >= viewEndMs;
 }
@@ -98,7 +98,7 @@ function isOutOfWeekRange(event, dateStr) {
  * 이벤트에 somaManaged 클래스가 필요한지.
  */
 function isSomaManaged(event) {
-  return event?.extendedProperties?.private?.somaManaged === "1";
+  return event?.isSomaLecture === true || event?.extendedProperties?.private?.somaManaged === "1";
 }
 
 /**
@@ -215,10 +215,10 @@ function renderWeekGrid(gridEl, anchorDate, events) {
       block.style.height = height + "px";
       const title = gridEl.ownerDocument.createElement("div");
       title.className = "cal-event-title";
-      title.textContent = event.summary || "(제목 없음)";
+      title.textContent = event.title || event.summary || "(제목 없음)";
       block.appendChild(title);
       if (event.htmlLink) {
-        block.title = event.summary || "";
+        block.title = event.title || event.summary || "";
         block.addEventListener("click", () => {
           if (typeof window !== "undefined") window.open(event.htmlLink, "_blank");
         });
@@ -291,7 +291,7 @@ function renderMonthGrid(gridEl, anchorDate, events) {
       for (const ev of eventByDate[dateStr]) {
         const pill = gridEl.ownerDocument.createElement("div");
         pill.className = "cal-month-event" + (isSomaManaged(ev) ? " soma-managed" : "");
-        pill.textContent = ev.summary || "(제목 없음)";
+        pill.textContent = ev.title || ev.summary || "(제목 없음)";
         if (ev.htmlLink) {
           pill.addEventListener("click", (e) => {
             e.stopPropagation();
