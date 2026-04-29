@@ -190,18 +190,24 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 ### B-7 spec 01 회귀 2건 — 🛑 차단 (2026-04-30, spec 12 자동 검증으로 발견)
 
-본래 사용자 라이브 검증 백로그(B-1~B-4)였던 항목 중 spec 12 인프라가 자동 검증을 시도하다 발견. spec 01 머지 시점(2026-04-29)에 라이브 환경 미검증으로 인해 누락.
+> **상세·진입 프롬프트**: [`docs/agent-troubleshooting/task-b7-spec01-regression.md`](../agent-troubleshooting/task-b7-spec01-regression.md)
 
-- **B-7-1 GET_CALENDAR_EVENTS 응답 형식 불일치**:
-  - `src/background/service-worker.js:200-217` `normalizeEvent`가 Google API items를 `{ id, title, startAt, endAt, htmlLink, calendarId, transparency, isSomaLecture, somaQustnrSn }` 평면 객체로 변환.
-  - `src/calendar/calendar-view.js:66` `splitEventByDay`는 `event.start.dateTime`를 기대 → `Cannot read properties of undefined (reading 'dateTime')`로 그리드 렌더 fail.
-  - 단위 테스트(`tests/unit/calendar-view.test.js`)는 raw 형식으로 시뮬해 통과 → 머지 통과.
-  - 수정: (a) `calendar-view.js`가 평면 형식도 받도록 — `event.startAt || event.start?.dateTime` 패턴, `extendedProperties` 접근부도 `event.isSomaLecture` fallback. 단위 테스트 영향 최소.
-- **B-7-2 manifest.json `tabs` permission 누락**:
-  - `src/background/service-worker.js:803` `chrome.action.onClicked` 핸들러에서 `chrome.tabs.query({ url: calendarUrl })` 호출 → 결과 url 필드 빈 값 → dedupe 실패.
-  - 수정: `manifest.json` permissions에 `"tabs"` 추가 (가장 단순) 또는 `chrome.storage.local.lastCalendarTabId` 추적.
+요약:
+- **B-7-1 `GET_CALENDAR_EVENTS` 응답 형식 불일치** — service-worker는 평면 객체(`event.startAt`)를 보내는데 `calendar-view.js:66 splitEventByDay`는 raw 형식(`event.start.dateTime`)을 기대. 그리드 렌더 fail.
+- **B-7-2 `manifest.json` `tabs` permission 누락** — `service-worker.js:803` `chrome.tabs.query({url})` 결과 url이 빈 값 → dedupe 실패, 두 번째 클릭 시 새 탭 중복 생성.
+- 차단 시나리오: `tests/e2e/scenarios/b1-toolbar.spec.js:63`·`b2-calendar.spec.js:49` (현재 `test.skip`)
+- 후속 PR `fix/spec-01-regressions` 한 번에 두 회귀 fix → e2e 8/8 활성화.
 
-후속 PR (`fix/spec-01-regressions`) 한 번에 두 회귀 fix 후 `tests/e2e/scenarios/b1-toolbar.spec.js`·`b2-calendar.spec.js`의 `test.skip` 제거 → 8/8 활성화.
+### B-8 E2E `HEADLESS=1` service worker timeout — ⏸️ 부분 차단 (2026-04-30)
+
+> **상세·진입 프롬프트**: [`docs/agent-troubleshooting/task-b8-e2e-headless.md`](../agent-troubleshooting/task-b8-e2e-headless.md)
+
+요약:
+- `npm run test:e2e` (헤드풀, default): 6/8 pass 정상 (8.9s)
+- `HEADLESS=1 npm run test:e2e`: 6/6 fail (모두 `helpers/launch.js:29` `waitForEvent("serviceworker")` 15s timeout)
+- 원인 추정: chromium headless='new' 모드에서 MV3 SW가 첫 navigation 트리거 없이 lazy-start 안 됨
+- 수정 옵션: 옵션 B(about:blank navigate로 SW trigger) 1차 시도 → 옵션 A(timeout 30s 상향) 추가 → 옵션 E(launch args) fallback
+- B-7과 독립 진행 가능. 헤드풀에서만 검증하면 B-8 미해소도 무방.
 
 ### B-5 ✅ 해소 (2026-04-29)
 
@@ -399,4 +405,5 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - **2026-04-29 Round 1 진입**: B-5 ✅ 머지(b812215, fixture 시각 영구 미래화). spec 01 본문 사용자 결정 반영해 통째 재작성 — 캘린더 본체를 lectureSnapshot 직접 렌더에서 **Google Calendar 이벤트만(`GET_CALENDAR_EVENTS` 메시지 재사용)** 으로 전환, **사이드 패널에 lectureSnapshot 기반 미신청 특강 + 빈 영역 드래그 시 완전 포함 필터** UX 도입. T-01 해소, 신규 메시지 없음, spec 02·03·04 필터 슬롯 인터페이스만 마련. §1(직전 세션)·§2(묶음 D Spec 01 결정 항목 갱신)·§3(T-01 해소·T-01a/b 신설)·§4(B-5 해소)·§5.3(Round 1 진행 표) 갱신.
 - **2026-04-29 Round 1 머지 완료**: spec 01 calendar-view 11 commits → main 머지. coder(sonnet) 위임 → code-reviewer(sonnet) 사이클 → 5 fix(REV-1~5) 적용 → 108/108 pass. 신규 파일 9개(`src/calendar/*` 5개 + tests 2개 + mock 1개), 수정 4개(`manifest.json`, `service-worker.js`, `agent-guide.md` §3·§7, `01-calendar-view.md`). spec 01 `Status: shipped`. lecture-filter `additionalFilters` plug-in 슬롯이 spec 02·03·04 진입 시 시그니처 변경 없이 확장 가능. 라이브 환경 수동 검증은 사용자 백로그(B-3과 함께). §1·§5.3·§6(Round 2 진입 안내) 갱신.
 - **2026-04-30 spec 12 (자동 E2E 테스트 환경) 신설 + shipped**: Playwright + Chromium persistent context 기반. 5개 시나리오(B-1~B-4 + C polling) 자동 검증. `npm run test:e2e` 9.1초에 6/8 통과. 인프라가 spec 01 회귀 2건(GET_CALENDAR_EVENTS 응답 형식·`tabs` permission 누락) 자동 발견, B-7로 신설 차단. 신규 파일: `tests/e2e/{playwright.config.js,helpers/*,fixtures/*,pages/*,scenarios/*,AUTHORING.md}`, `.github/workflows/test.yml`, `docs/specs/12-test-automation.md`. 수정: `package.json` (devDep `@playwright/test`, scripts `test:e2e/test:e2e:install/test:all`), `CLAUDE.md` (명령어·실행 환경 섹션), `docs/specs/README.md` (도구 트랙 표 추가). src/·mock/·tests/unit/· tests/fixtures/site-current 미변경. §1·§2·§4(B-7 신설)·§3(T-12-1~3 신규 미해결) 갱신.
+- **2026-04-30 차단 작업 2건 분리 문서화**: B-7(spec 01 회귀)·B-8(E2E HEADLESS=1 SW timeout) 두 task를 다음 세션에서 cold start로 진입 가능하도록 별도 troubleshooting 문서 신설 — `docs/agent-troubleshooting/task-b7-spec01-regression.md`, `task-b8-e2e-headless.md`. 각 문서는 원인·수정 방침·검증·커밋 분할·**다음 세션 진입 프롬프트**를 포함. NEXT-SESSION §4 B-7 본문 축약(상세는 link)·B-8 신규 entry 추가. Bash 환경(headless='new')에서 직접 검증한 결과: 헤드풀 6/8 pass 정상, HEADLESS=1 6/6 fail (사용자 환경 검증 결과와 일치, B-7 차단 시나리오 2개는 헤드풀에서도 의도적 skip 유지).
 - **2026-04-30 묶음 B+C 결정 5개 완료**: 백로그 단계 1. recommender(sonnet) 백그라운드 추천 + general-purpose(sonnet) 라이브 검증 자동 점검 6/6 ✅. AskUserQuestion 2회로 사용자 결정 수집 — 5개 모두 추천 채택 (U-08-1 A·U-09-1 C·U-10-2 B·U-02-2 A·U-04-2 B). spec 02·04·08·09·10 §3·§12 결정 반영, **spec 11 (자유 텍스트 검색) stub 신설**, README Phase 인덱스에 spec 11 추가 + spec 01·05 shipped 표기. §2 묶음 B·C 결정 완료 항목으로 이동. Round 2 진입 시 spec 코딩 차단 결정 모두 해소.
