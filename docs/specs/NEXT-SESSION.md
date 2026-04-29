@@ -15,6 +15,17 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
+### 2026-04-30 B-7 fix 완료 (spec 01 회귀)
+
+**B-7 spec 01 회귀 2건 fix** — `fix/spec-01-regressions` 3 커밋(a3e15ae·86617c1·1675f1c) → 사실 반영만:
+- a3e15ae `fix(calendar): handle flat event format from GET_CALENDAR_EVENTS (B-7-1)`
+- 86617c1 `fix(manifest): add tabs permission for chrome.tabs.query (B-7-2)`
+- 1675f1c `test(e2e): activate B-1/B-2 scenarios after B-7 fix`
+- 단위 테스트 117/117 pass (calendar-view.test.js에 평면 이벤트 형식 검증 9개 추가)
+- e2e 8/8 pass (B-1 dedupe + B-2 events 시나리오 활성화)
+
+토큰 비효율: Agent 충돌로 단위 테스트 1차 유실 → 재작성(약 +33k token). Round 2부터 worktree isolation 우선.
+
 ### 2026-04-29 Round 1 머지 완료 (B-5 fix + spec 01)
 
 **B-5 회귀 fix** — `fix/content-scripts-test-regression` 1 커밋(b812215) → main. fixture 강의 시각 영구 미래화. `npm test` 79/79.
@@ -188,15 +199,12 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
 
-### B-7 spec 01 회귀 2건 — 🛑 차단 (2026-04-30, spec 12 자동 검증으로 발견)
+### B-7 ✅ 해소 (2026-04-30)
 
-> **상세·진입 프롬프트**: [`docs/agent-troubleshooting/task-b7-spec01-regression.md`](../agent-troubleshooting/task-b7-spec01-regression.md)
-
-요약:
-- **B-7-1 `GET_CALENDAR_EVENTS` 응답 형식 불일치** — service-worker는 평면 객체(`event.startAt`)를 보내는데 `calendar-view.js:66 splitEventByDay`는 raw 형식(`event.start.dateTime`)을 기대. 그리드 렌더 fail.
-- **B-7-2 `manifest.json` `tabs` permission 누락** — `service-worker.js:803` `chrome.tabs.query({url})` 결과 url이 빈 값 → dedupe 실패, 두 번째 클릭 시 새 탭 중복 생성.
-- 차단 시나리오: `tests/e2e/scenarios/b1-toolbar.spec.js:63`·`b2-calendar.spec.js:49` (현재 `test.skip`)
-- 후속 PR `fix/spec-01-regressions` 한 번에 두 회귀 fix → e2e 8/8 활성화.
+**spec 01 회귀 2건 fix 완료** — `fix/spec-01-regressions` 3 커밋(a3e15ae·86617c1·1675f1c), 브랜치 base `feature/12-test-automation` → 별도 PR로 main 진입 예정.
+- B-7-1: `splitEventByDay` 응답 형식 평면화 처리 (event.startAt → event.start.dateTime 문제 해결)
+- B-7-2: `manifest.json`에 `tabs` permission 추가 (chrome.tabs.query 결과 url 정상 반환)
+- 테스트: 단위 117/117 pass, e2e 8/8 pass (B-1 dedupe·B-2 events 시나리오 활성화)
 
 ### B-8 E2E `HEADLESS=1` service worker timeout — ⏸️ 부분 차단 (2026-04-30)
 
@@ -407,3 +415,4 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - **2026-04-30 spec 12 (자동 E2E 테스트 환경) 신설 + shipped**: Playwright + Chromium persistent context 기반. 5개 시나리오(B-1~B-4 + C polling) 자동 검증. `npm run test:e2e` 9.1초에 6/8 통과. 인프라가 spec 01 회귀 2건(GET_CALENDAR_EVENTS 응답 형식·`tabs` permission 누락) 자동 발견, B-7로 신설 차단. 신규 파일: `tests/e2e/{playwright.config.js,helpers/*,fixtures/*,pages/*,scenarios/*,AUTHORING.md}`, `.github/workflows/test.yml`, `docs/specs/12-test-automation.md`. 수정: `package.json` (devDep `@playwright/test`, scripts `test:e2e/test:e2e:install/test:all`), `CLAUDE.md` (명령어·실행 환경 섹션), `docs/specs/README.md` (도구 트랙 표 추가). src/·mock/·tests/unit/· tests/fixtures/site-current 미변경. §1·§2·§4(B-7 신설)·§3(T-12-1~3 신규 미해결) 갱신.
 - **2026-04-30 차단 작업 2건 분리 문서화**: B-7(spec 01 회귀)·B-8(E2E HEADLESS=1 SW timeout) 두 task를 다음 세션에서 cold start로 진입 가능하도록 별도 troubleshooting 문서 신설 — `docs/agent-troubleshooting/task-b7-spec01-regression.md`, `task-b8-e2e-headless.md`. 각 문서는 원인·수정 방침·검증·커밋 분할·**다음 세션 진입 프롬프트**를 포함. NEXT-SESSION §4 B-7 본문 축약(상세는 link)·B-8 신규 entry 추가. Bash 환경(headless='new')에서 직접 검증한 결과: 헤드풀 6/8 pass 정상, HEADLESS=1 6/6 fail (사용자 환경 검증 결과와 일치, B-7 차단 시나리오 2개는 헤드풀에서도 의도적 skip 유지).
 - **2026-04-30 묶음 B+C 결정 5개 완료**: 백로그 단계 1. recommender(sonnet) 백그라운드 추천 + general-purpose(sonnet) 라이브 검증 자동 점검 6/6 ✅. AskUserQuestion 2회로 사용자 결정 수집 — 5개 모두 추천 채택 (U-08-1 A·U-09-1 C·U-10-2 B·U-02-2 A·U-04-2 B). spec 02·04·08·09·10 §3·§12 결정 반영, **spec 11 (자유 텍스트 검색) stub 신설**, README Phase 인덱스에 spec 11 추가 + spec 01·05 shipped 표기. §2 묶음 B·C 결정 완료 항목으로 이동. Round 2 진입 시 spec 코딩 차단 결정 모두 해소.
+- **2026-04-30 B-7 fix 완료**: 3 commits(a3e15ae·86617c1·1675f1c), e2e 8/8 pass·단위 117/117 pass. `fix/spec-01-regressions` 브랜치에서 main 진입 예정. §1·§4(B-7 ✅ 마킹) 갱신.
