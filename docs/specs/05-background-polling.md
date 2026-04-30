@@ -43,12 +43,12 @@
 
 ### Golden path
 1. 확장 설치/업데이트 시 `chrome.runtime.onInstalled`에서 alarm 등록.
-2. 옵션 페이지에서 사용자가 폴링 활성화 + 주기(분) + 조회 범위(예: 오늘+30일) 설정.
+2. 옵션 페이지에서 사용자가 폴링 활성화 + 주기(분) + 조회 범위 설정.
 3. 매 alarm fire마다 service worker가:
    a. SWM 특강 목록 URL을 GET (날짜 범위·페이지 쿼리스트링 포함)
    b. `pageIndex=1`부터 시작해 순차적으로 페이지 폴링
    c. 각 페이지 HTML 파싱 → lecture 배열에 누적
-   d. 빈 페이지 도착 또는 10 페이지 도달 시 폴링 중단
+   d. 빈 페이지 도착 또는 30 페이지 도달 시 폴링 중단
    e. 누적 배열을 `lectureSnapshot`에 저장 + `lastPolledAt` 업데이트
    f. (spec 06) diff 계산 호출 (이벤트 publish)
 4. 실패 시 backoff (예: 1m → 5m → 15m, 이후 1시간 간격으로 재시도). 연속 N회 실패 시 폴링 일시 정지 + 옵션 페이지 배너.
@@ -64,9 +64,10 @@
 - 옵션 페이지에 `백그라운드 폴링` 섹션 추가
   - 활성 토글
   - 주기(분, 1~120, 기본 10)
-  - 날짜 범위 모드: `오늘부터 N일` (N: 7, 14, 30, 90 중 선택, 기본 30)
+  - 날짜 범위(일): 직접 입력 또는 사전설정(기본 1825 = 5년, 사실상 전체 미래 일정)
   - 마지막 성공 시각, 마지막 실패 사유 표시
   - `지금 한 번 폴링` 버튼 (수동 트리거)
+  - 사용자가 `chrome.storage.sync.set({pollingSettings:{...}})`로 임의 override 가능
 
 ## 6. 데이터 모델
 
@@ -75,7 +76,7 @@
 type PollingSettings = {
   enabled: boolean;       // 기본 false (사용자가 명시적 활성화)
   intervalMinutes: number; // 기본 10
-  rangeDays: number;       // 기본 30
+  rangeDays: number;       // 기본 1825 (5년, 사실상 전체 미래 일정)
 };
 
 // chrome.storage.local (런타임 상태)
@@ -167,13 +168,13 @@ type LectureSnapshot = {
 
 ## 14. 폴링 사이클 알고리즘 (확정, 2026-04-30)
 
-1. `scdate=today`, `ecdate=today+rangeDays` 계산 (rangeDays는 사용자 설정)
+1. `scdate=today`, `ecdate=today+rangeDays` 계산 (rangeDays는 사용자 설정, 기본 1825일 = 5년)
 2. `pageIndex=1`부터 시작
 3. 각 페이지 fetch + 파싱 + 결과 배열에 누적
-4. 빈 페이지 도착 또는 10 페이지 도달 시 루프 종료
+4. 빈 페이지 도착 또는 30 페이지(안전망) 도달 시 루프 종료
 5. 누적 배열을 `lectureSnapshot` 저장
 
-이 메커니즘으로 특강 목록이 한 페이지(10개)만 반환되는 제약을 극복하고 전체 강의를 폴링할 수 있다.
+이 메커니즘으로 특강 목록이 한 페이지(10개)만 반환되는 제약을 극복하고 전체 미래 강의를 폴링할 수 있다. 기본 5년 범위는 사실상 시작 이후 모든 특강을 커버한다.
 
 ## 15. 관련 링크
 
