@@ -77,8 +77,16 @@ test("DEFAULT_POLLING_SETTINGS matches spec defaults", () => {
   assert.deepEqual(Polling.DEFAULT_POLLING_SETTINGS, {
     enabled: false,
     intervalMinutes: 10,
-    rangeDays: 30
+    rangeDays: 1825
   });
+});
+
+test("DEFAULT_POLLING_SETTINGS.rangeDays is 1825 (5-year future coverage)", () => {
+  assert.equal(Polling.DEFAULT_POLLING_SETTINGS.rangeDays, 1825);
+});
+
+test("MAX_PAGES is 30", () => {
+  assert.equal(Polling.MAX_PAGES, 30);
 });
 
 test("DEFAULT_POLLING_STATE has zeroed counters", () => {
@@ -368,7 +376,7 @@ test("handleAlarmFire stores rangeDays-aware snapshot metadata on success", asyn
 
 test("handleAlarmFire writes ISO date rangeStart/rangeEnd derived from rangeDays", async () => {
   const { chrome, store } = makeChromeMock({
-    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 1825 },
     pollingState: { ...Polling.DEFAULT_POLLING_STATE }
   });
 
@@ -382,7 +390,7 @@ test("handleAlarmFire writes ISO date rangeStart/rangeEnd derived from rangeDays
   assert.match(snapshot.rangeStart, /^\d{4}-\d{2}-\d{2}$/);
   assert.match(snapshot.rangeEnd, /^\d{4}-\d{2}-\d{2}$/);
   assert.equal(snapshot.rangeStart, "2026-04-29");
-  assert.equal(snapshot.rangeEnd, "2026-05-29");
+  assert.equal(snapshot.rangeEnd, "2031-04-28");
 });
 
 test("handleAlarmFire honors rangeDays=7 for rangeEnd ISO date", async () => {
@@ -438,7 +446,7 @@ test("handleAlarmFire fetches pages 1,2,3 then stops on empty page 4", async () 
 
 test("handleAlarmFire passes scdate and ecdate derived from rangeStart/rangeEnd to fetchListHtml", async () => {
   const { chrome } = makeChromeMock({
-    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 30 },
+    pollingSettings: { enabled: true, intervalMinutes: 10, rangeDays: 1825 },
     pollingState: { ...Polling.DEFAULT_POLLING_STATE }
   });
 
@@ -458,7 +466,7 @@ test("handleAlarmFire passes scdate and ecdate derived from rangeStart/rangeEnd 
   });
 
   assert.equal(fetchCalls[0].scdate, "2026-04-29");
-  assert.equal(fetchCalls[0].ecdate, "2026-05-29");
+  assert.equal(fetchCalls[0].ecdate, "2031-04-28");
   assert.equal(fetchCalls[0].pageIndex, 1);
   assert.equal(fetchCalls[1].pageIndex, 2);
 });

@@ -8,12 +8,12 @@
   const ALARM_KEY = "soma-polling";
   const MAX_BACKOFF_FAILURES = 5;
   const BACKOFF_SEQUENCE_MINUTES = [1, 5, 15, 60, 60];
-  const MAX_PAGES = 10;
+  const MAX_PAGES = 30;
 
   const DEFAULT_POLLING_SETTINGS = {
     enabled: false,
     intervalMinutes: 10,
-    rangeDays: 30
+    rangeDays: 1825
   };
 
   const DEFAULT_POLLING_STATE = {
