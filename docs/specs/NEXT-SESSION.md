@@ -15,6 +15,10 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
+### 2026-04-30 B-8 해소: e2e HEADLESS=1 12/12 pass
+
+**E2E 헤드리스 모드 자동화 완성** — `fix/spec-12-headless` 브랜치에서 `tests/e2e/helpers/launch.js` 수정(headless:false + --headless=new arg + about:blank navigate + serviceWorkers() polling). 적용 후 HEADLESS=1 npm run test:e2e 12/12 pass 달성. 헤드풀 12/12 pass 유지. main fast-forward 머지 예정.
+
 ### 2026-04-30 e2e 폴링 커버리지 보강
 
 **fixture·scenario 다중 페이지 확장** — `test/e2e-polling-coverage` 브랜치에서 문서만 갱신. spec 12 시나리오 보강 진행 중(다른 Agent 담당). 라이브 회귀를 자동 e2e로 먼저 잡기 위해 fixture(menuNo·scdate·ecdate·pageIndex) 패턴 보강, scenario에 다중 페이지·다중 날짜 범위 순회 검증 추가 예정.
@@ -231,16 +235,9 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 - B-7-2: `manifest.json`에 `tabs` permission 추가 (chrome.tabs.query 결과 url 정상 반환)
 - 테스트: 단위 117/117 pass, e2e 8/8 pass (B-1 dedupe·B-2 events 시나리오 활성화)
 
-### B-8 E2E `HEADLESS=1` service worker timeout — ⏸️ 부분 차단 (2026-04-30)
+### B-8 ✅ 해소 (2026-04-30)
 
-> **상세·진입 프롬프트**: [`docs/agent-troubleshooting/task-b8-e2e-headless.md`](../agent-troubleshooting/task-b8-e2e-headless.md)
-
-요약:
-- `npm run test:e2e` (헤드풀, default): 6/8 pass 정상 (8.9s)
-- `HEADLESS=1 npm run test:e2e`: 6/6 fail (모두 `helpers/launch.js:29` `waitForEvent("serviceworker")` 15s timeout)
-- 원인 추정: chromium headless='new' 모드에서 MV3 SW가 첫 navigation 트리거 없이 lazy-start 안 됨
-- 수정 옵션: 옵션 B(about:blank navigate로 SW trigger) 1차 시도 → 옵션 A(timeout 30s 상향) 추가 → 옵션 E(launch args) fallback
-- B-7과 독립 진행 가능. 헤드풀에서만 검증하면 B-8 미해소도 무방.
+**E2E headless='new' 모드 service worker timeout fix** — `fix/spec-12-headless` 브랜치. 원인: headless='new' 모드에서 MV3 SW가 첫 navigation 트리거 없이 lazy-start 안 됨. 해결: 옵션 B+E+A 조합 적용 (headless:false + --headless=new arg + about:blank navigate + serviceWorkers() polling). 결과: HEADLESS=1 12/12 pass (B-7 미머지 가정 시 6/12). main fast-forward 머지, NEXT-SESSION 갱신 예정.
 
 ### B-5 ✅ 해소 (2026-04-29)
 
@@ -434,6 +431,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 9. 변경 이력
 
+- **2026-04-30 B-8 해소**: E2E headless='new' 모드 service worker timeout fix. 옵션 B(about:blank navigate) + E(launch args) + A(timeout 상향) 조합으로 HEADLESS=1 12/12 pass 달성. 문서 갱신: NEXT-SESSION §1·§4·§9, task-b8-e2e-headless.md 상단에 ✅ 해소 마킹 및 적용 옵션 표기.
 - **2026-04-30 e2e 폴링 커버리지 보강 + 라이브 검증 최후 수단 규칙 신설**: fixture·scenario 다중 페이지/날짜 확장 진행 중. 문서 갱신: AUTHORING.md "라이브 회귀 발견 시 fixture" 섹션, NEXT-SESSION §1 직전 세션 추가, §5.7 라이브 검증 최후 수단 신규 섹션, §9 변경이력.
 - **2026-04-30 spec 05 폴링 범위 확장**: default `rangeDays` 30 → 1825(5년), `MAX_PAGES` 10 → 30. 사실상 "전체 미래 일정" 폴링 정책. 문서 갱신: spec 05 §6·§5·§14, NEXT-SESSION §1.
 - **2026-04-30 B-10 ✅ 해소**: spec 05 페이지네이션 누락 — `scdate`/`ecdate`/`pageIndex` 쿼리 지원으로 폴링 다중 페이지 순회. 문서 갱신 3건(NEXT-SESSION §1·§4·§9, spec 05 정책·알고리즘, runtime-env 한 줄).

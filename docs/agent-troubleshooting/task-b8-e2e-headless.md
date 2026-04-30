@@ -1,9 +1,11 @@
 # Task B-8: E2E HEADLESS=1 모드 service worker timeout fix
 
-> Status: open · 차단: ⏸️ HEADLESS 모드(CI·백그라운드)에서만 fail. 헤드풀은 정상.
-> Branch: `fix/e2e-headless-sw-timeout` (main에서 cut)
+> **✅ 해소 (2026-04-30)** — headless:false + --headless=new arg + about:blank navigate + serviceWorkers() polling 조합으로 HEADLESS=1 12/12 pass. main fast-forward 머지: `<merge-sha>`
+>
+> Status: shipped · 차단: 없음 (해소됨)
+> Branch: `fix/spec-12-headless` → main (fast-forward)
 > 발견: 2026-04-30, Claude Code Bash 환경에서 `HEADLESS=1 npm run test:e2e` 실행 시
-> 예상 작업: 30~60분 (단발 fix, 수정 옵션 비교 후 1~2개 적용)
+> 작업: 완료
 
 ## 0. 세션 분리 운영 메모
 
