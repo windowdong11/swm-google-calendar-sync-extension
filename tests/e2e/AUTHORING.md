@@ -96,6 +96,10 @@ npm run test:e2e -- scenarios/<spec-id>-<short>.spec.js
 - **service worker로 메시지 발송 (자기 자신 X)**: `swSendMessage(ctx, extId, { type: "..." })` — 임시 calendar.html 페이지를 열고 거기서 sendMessage하는 우회. SW가 자기에게 sendMessage하면 "Receiving end does not exist" 에러.
 - **chrome.action.onClicked 시뮬**: `swEval(ctx, async () => { /* 핸들러 동일 흐름 */ })`. Playwright는 toolbar 아이콘 직접 클릭 불가.
 
+## 라이브 회귀 발견 시 fixture에 패턴 반영
+
+라이브 환경에서 발견된 SoMA 응답 패턴(URL 쿼리·페이지네이션·정렬·날짜 형식 등)은 즉시 `tests/e2e/fixtures/`에 mock으로 추가하고 해당 시나리오에서 검증해야 한다. fixture가 실제 SoMA와 어긋나면 e2e가 통과해도 라이브 회귀를 못 잡는다. 라이브 검증은 fixture 보강 후 최종 확인용으로만 사용.
+
 ## 자동화 한계
 
 자동 검증 불가 항목 (spec 12 §3 제외 항목):
