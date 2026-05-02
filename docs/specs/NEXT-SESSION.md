@@ -15,36 +15,18 @@
 
 ## 1. 직전 세션에서 한 일 (요약)
 
-### 2026-04-30 B-8 해소: e2e HEADLESS=1 12/12 pass
+### 2026-04-30 ~ 2026-05-02 Round 1.5 — spec 12 자동화 인프라 + 라이브 회귀 4건 fix + B-8 해소
 
-**E2E 헤드리스 모드 자동화 완성** — `fix/spec-12-headless` 브랜치에서 `tests/e2e/helpers/launch.js` 수정(headless:false + --headless=new arg + about:blank navigate + serviceWorkers() polling). 적용 후 HEADLESS=1 npm run test:e2e 12/12 pass 달성. 헤드풀 12/12 pass 유지. main fast-forward 머지 예정.
+**E2E 자동 테스트 인프라 + 스펙 01/05 회귀 2건 + B-8 headless 모드 timeout 해소**. 6개 작업 모두 main 머지 완료:
 
-### 2026-04-30 e2e 폴링 커버리지 보강
+1. **B-7 fix** (`fix/spec-01-regressions`, 3 commits): spec 01 회귀 2건 — GET_CALENDAR_EVENTS 응답 형식 평면화 처리 + manifest.json `tabs` permission. e2e B-1·B-2 시나리오 활성화. 단위 117/117 pass.
+2. **B-9 fix** (`fix/spec-05-list-url-menuno`, 1 commit): list.do URL `?menuNo=200046` 누락 회귀.
+3. **B-10 fix** (`fix/spec-05-pagination`, 2 commits): 폴링이 첫 페이지만 가져오던 회귀. `buildListUrl({scdate, ecdate, pageIndex})` 추가, `pageIndex=1` 순회, 빈 페이지/MAX_PAGES cap 시 stop.
+4. **폴링 범위 확장** (`fix/spec-05-range-all-future`, 2 commits): rangeDays 30→1825(5년), MAX_PAGES 10→30. 사실상 "전체 미래 일정".
+5. **e2e 커버리지 보강** (`test/e2e-polling-coverage`, 2 commits): c-polling.spec.js에 B-9·B-10 회귀 자동 검증. fixture 다중 페이지 mock. AUTHORING.md "fixture-first, 라이브 최후 수단" 룰 추가.
+6. **B-8 fix** (`fix/spec-12-headless`, 2 commits): HEADLESS=1 service worker timeout 해소. headless:false + `--headless=new` arg + about:blank navigate + serviceWorkers() polling. HEADLESS=1 e2e 12/12 pass.
 
-**fixture·scenario 다중 페이지 확장** — `test/e2e-polling-coverage` 브랜치에서 문서만 갱신. spec 12 시나리오 보강 진행 중(다른 Agent 담당). 라이브 회귀를 자동 e2e로 먼저 잡기 위해 fixture(menuNo·scdate·ecdate·pageIndex) 패턴 보강, scenario에 다중 페이지·다중 날짜 범위 순회 검증 추가 예정.
-
-### 2026-04-30 spec 05 폴링 범위 확장 (30일 → 5년)
-
-**폴링 범위 정책 갱신** — spec 05 default `rangeDays` 30 → 1825(5년), `MAX_PAGES` 10 → 30. 의도: 사실상 "전체 미래 일정" 폴링. 문서 갱신: spec 05 §6·§5·§14, NEXT-SESSION 이 항목.
-
-### 2026-04-30 spec 05 페이지네이션 fix (B-10 해소)
-
-**B-10 spec 05 페이지네이션 누락 fix** — `fix/spec-05-pagination` 작업 중. 라이브 회귀 원인: list.do 응답이 첫 페이지(10개)만 반환, 추가 페이지 폴링 미지원. 해결: `scdate=today`, `ecdate=today+rangeDays` 동적 생성 + `pageIndex=1`부터 순회 + 빈 페이지 또는 10 페이지 cap 시 stop. 문서 갱신(NEXT-SESSION·spec 05·runtime-env).
-
-### 2026-04-30 spec 05 라이브 회귀 fix (menuNo=200046)
-
-**D-05-2 해소** — `fix/spec-05-list-url-menuno` 1 커밋: SoMA list.do가 querystring `?menuNo=200046` 없으면 page-not-found으로 redirect. `src/background/swm-fetch.js` LIST_URL에 쿼리스트링 추가. 회귀 테스트 추가.
-
-### 2026-04-30 B-7 fix 완료 (spec 01 회귀)
-
-**B-7 spec 01 회귀 2건 fix** — `fix/spec-01-regressions` 3 커밋(a3e15ae·86617c1·1675f1c) → 사실 반영만:
-- a3e15ae `fix(calendar): handle flat event format from GET_CALENDAR_EVENTS (B-7-1)`
-- 86617c1 `fix(manifest): add tabs permission for chrome.tabs.query (B-7-2)`
-- 1675f1c `test(e2e): activate B-1/B-2 scenarios after B-7 fix`
-- 단위 테스트 117/117 pass (calendar-view.test.js에 평면 이벤트 형식 검증 9개 추가)
-- e2e 8/8 pass (B-1 dedupe + B-2 events 시나리오 활성화)
-
-토큰 비효율: Agent 충돌로 단위 테스트 1차 유실 → 재작성(약 +33k token). Round 2부터 worktree isolation 우선.
+**토큰 효율 검증** (격리 룰 실제 검증, 5회 연속 사고 0): B-7 ~128k (Agent 충돌 1회, +33k 손실). 나머지 5건은 각각 ~60~89k, 모두 사고 0 — 같은 working tree에서 **다른 파일 영역**으로 분리 + 변경 직후 **즉시 git add** 강제로 worktree 없이도 안전성 확보.
 
 ### 2026-04-29 Round 1 머지 완료 (B-5 fix + spec 01)
 
@@ -220,31 +202,6 @@ spec 05 핵심 경로는 머지됨. 옵션 UI 후속 PR 작성 시 결정.
 
 - spec 08 작성·테스트 단계에서 사용자 환경(macOS 알림 센터 설정)에서 실제로 표시되는지 확인.
 
-### B-10 ✅ 해소 (2026-04-30)
-
-**spec 05 페이지네이션 누락** — `fix/spec-05-pagination` 문서 갱신 작업. 원인: list.do 응답이 한 페이지(10개 강의)만 반환하여 전체 강의 미폴링. 해결: LIST_URL에 `scdate`, `ecdate`, `pageIndex` 쿼리 파라미터 지원. 동작: `scdate=today`, `ecdate=today+rangeDays` 동적 계산 → `pageIndex=1`부터 순회 → 빈 페이지 또는 10 페이지 도달 시 stop. 문서 세 개(NEXT-SESSION §1·§4·§9, spec 05 라이브 URL 정책·폴링 알고리즘, runtime-env 한 줄) 갱신 완료.
-
-### B-9 ✅ 해소 (2026-04-30)
-
-**spec 05 라이브 회귀 (lectures empty)** — `fix/spec-05-list-url-menuno` 1 커밋. 원인: list.do가 `?menuNo=200046` 없이 404 리다이렉트. swm-fetch.js LIST_URL 수정 + 회귀 테스트.
-
-### B-7 ✅ 해소 (2026-04-30)
-
-**spec 01 회귀 2건 fix 완료** — `fix/spec-01-regressions` 3 커밋(a3e15ae·86617c1·1675f1c), 브랜치 base `feature/12-test-automation` → 별도 PR로 main 진입 예정.
-- B-7-1: `splitEventByDay` 응답 형식 평면화 처리 (event.startAt → event.start.dateTime 문제 해결)
-- B-7-2: `manifest.json`에 `tabs` permission 추가 (chrome.tabs.query 결과 url 정상 반환)
-- 테스트: 단위 117/117 pass, e2e 8/8 pass (B-1 dedupe·B-2 events 시나리오 활성화)
-
-### B-8 ✅ 해소 (2026-04-30)
-
-**E2E headless='new' 모드 service worker timeout fix** — `fix/spec-12-headless` 브랜치. 원인: headless='new' 모드에서 MV3 SW가 첫 navigation 트리거 없이 lazy-start 안 됨. 해결: 옵션 B+E+A 조합 적용 (headless:false + --headless=new arg + about:blank navigate + serviceWorkers() polling). 결과: HEADLESS=1 12/12 pass (B-7 미머지 가정 시 6/12). main fast-forward 머지, NEXT-SESSION 갱신 예정.
-
-### B-5 ✅ 해소 (2026-04-29)
-
-- **원인**: `example/soma-cancelschedule.html` fixture의 강의 시각이 `2026.04.30 14:00`로 하드코딩 → 현재 시각이 24h 미만 떨어진 시점부터 `apply.js:canCancelBeforeStart()` (`eventStart - now > 24h`)가 false → cancel API 미호출 → `DELETE_CALENDAR_EVENT_BY_LECTURE` 메시지 미발송 → `waitFor` timeout.
-- **해결**: fixture 강의 날짜를 `2099.04.30`으로 영구 미래화 (`fix(test): future-proof cancel fixture date against system clock drift`, b812215). history fixture(`2099-05-10`)와 동일 패턴.
-- **결과**: main HEAD `npm test` 79/79 pass.
-
 ---
 
 ## 5. 작업 라운드 (병렬 트랙)
@@ -293,7 +250,7 @@ B-1 ─── 02 (category) ──┐
 | 사용자 | spec 01 라이브 환경 수동 검증 | 🟡 미수행 (B-3 검증과 같은 시점 권장) |
 | 사용자 | **묶음 B** 알림 정책 3개 + **묶음 C** spec 진입 2개 결정 | 🟡 미수행 (Round 2 진입 전 필수) |
 
-### 5.4 Round 2 — 두 트랙 병렬 (B-1 캡처 도착 가정)
+### 5.4 Round 2 — 두 트랙 병렬 (선결조건 모두 해소)
 
 ```
 Track A (service-worker 흐름):     Track B (parsers.js 흐름):
@@ -302,8 +259,8 @@ Track A (service-worker 흐름):     Track B (parsers.js 흐름):
 
 | 트랙 | spec | 코드 영역 | 사용자 결정 |
 |---|---|---|---|
-| A | 06 → 08 | `service-worker.js`, `popup.js` | Round 1에서 처리됨 |
-| B | 02 → 03 → 04 | `parsers.js`, 옵션 페이지 | Round 1에서 처리됨 |
+| A | 06 → 08 | `service-worker.js`, `popup.js` | ✅ Round 1에서 처리됨 |
+| B | 02 → 03 → 04 | `parsers.js`, 옵션 페이지 | ✅ Round 1에서 처리됨 |
 
 **진행 옵션**:
 - **(권장) Track A 먼저, B 나중** — 06·08은 한 흐름이라 한 세션에 묶어 작업. 머지 후 02·03·04 진입.
@@ -326,6 +283,8 @@ Round 0 ┃ ✅ 완료 — spec 05 + 비식별화 도구 머지 (2026-04-29)    
 Round 1 ┃ [Claude: spec 01] + (선택) B-5 회귀 fix                    ┃ ← 다음 진입
         ┃ [User: 묶음B(3) + 묶음C(2)]                                ┃
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Round 1.5 ┃ ✅ 완료 — B-7/9/10 라이브 회귀 4건 fix + e2e 보강 + B-8 헤드리스 모드 (2026-05-02)
+         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Round 2 ┃ [Claude: 06→08]      →  [Claude: 02→03→04]                 ┃
         ┃ (B-2 신청수 결정 — 상세 폴링 도입 여부)                    ┃
         ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -355,35 +314,24 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 6. 권장 다음 세션 시작 시퀀스
 
-진입 지점: **Round 2 — spec 06·08 (Track A) 또는 spec 02·03·04 (Track B)**. spec 05·01 머지됨.
+진입 지점: **Round 2 — spec 06·08 (Track A) 또는 spec 02·03·04 (Track B)**. 선결조건 모두 해소됨.
 
 ### 권장 순서
 
-1. **세션 시작 시 한 줄 보고** — 메인이 `git log --oneline main -15`로 직전 머지 확인 (spec 01 11 commits + B-5 fix가 보일 것). 본 NEXT-SESSION.md 읽고 작업 자동 진입.
+1. **세션 시작** — 메인이 `git log --oneline main -5`로 Round 1.5 머지 확인. 본 NEXT-SESSION.md 읽고 Round 2 진입.
 
-2. **사용자 라이브 검증 (백로그)**: spec 01 unpacked 확장 수동 4 케이스 (§1 라이브 환경 미검증 항목) + spec 05 폴링 라이브(B-3) 한 세션에 묶어 처리. 30분 내. 결과를 NEXT-SESSION에 적어 다음 라운드 신뢰도 확보.
-
-3. **사용자 결정 처리 (Round 2 진입 전 필수)**:
-   - 묶음 B: U-08-1, U-09-1, U-10-2 (알림 정책 3개)
-   - 묶음 C: U-02-2, U-04-2 (spec 02·04 진입 직전 2개)
-   - B-2: 신청수 폴링 비용 결정 (Round 2 spec 06 진입 시)
-
-4. **Round 2 — Track A 우선 (권장)**: spec 06 → spec 08 한 흐름.
+2. **Round 2 — Track A 우선 (권장)**: spec 06 → spec 08 한 흐름.
    - `feature/06-lecture-snapshot-diff` → `code-delegate` 위임
-   - 머지 후 `feature/08-notification-queue` → `code-delegate` 위임 (07 폐기, 책임 흡수)
+   - 머지 후 `feature/08-notification-queue` → `code-delegate` 위임 (spec 07 폐기, 책임 흡수)
 
-5. **Round 2 — Track B (Track A 머지 후 또는 worktree 병렬)**: spec 02 → spec 03 → spec 04. parsers.js 충돌 위험으로 02·03 순차 권장.
+3. **Round 2 — Track B (Track A 머지 후 또는 worktree 병렬)**: spec 02 → spec 03 → spec 04. parsers.js 충돌 위험으로 02·03 순차 권장.
+   - B-2 신청수 폴링 비용 결정은 spec 06 진입 시점에 (researcher 백그라운드 위임 가능).
 
-6. **Round 3 — Phase 3**: spec 09 ∥ spec 10 (코드 영역 다름 → 동시 진행). spec 05 옵션 UI 후속 PR도 이때 묶어 처리.
+4. **Round 3 — Phase 3**: spec 09 ∥ spec 10 (코드 영역 다름 → 동시 진행). spec 05 옵션 UI 후속 PR도 이때 묶어 처리.
 
-### 파워유저 흐름 (spec 01 진입 직후 한 메시지로)
+### 백로그 (낮은 우선순위)
 
-```
-"Round 1 진입 — feature/01-calendar-view 브랜치 컷, code-delegate로 spec 01 본문 §3·§6·§7만 컨텍스트로 coder 위임. 
-완료 후 reviewer 자동 사이클. 머지·NEXT-SESSION 갱신까지 자동 진행."
-```
-
-이러면 메인이 자동 오케스트레이션. 사용자 개입은 머지 직전 PR 본문 확인 1회.
+spec 01·05 라이브 smoke test (unpacked 확장 B-3 검증, 30분 내) — 단위 e2e 모두 pass 상태이므로 urgent 아님. spec 08·09·10 진입 후 여유 시 처리.
 
 ---
 
@@ -399,12 +347,57 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - **`run_in_background: true`** — Track B 백그라운드 위임 + 메인은 Track A 진행.
 - **`claude -p`** — B-3 인증 검증처럼 단발 fetch 작업 (메인 OAuth context 격리).
 
-### 7.2 토큰 절약 룰
+### 7.2 토큰 절약 & 안전 룰
 
-- spec 본문·NEXT-SESSION·agent-guide 통째 Read 금지 → Explore Agent 질의로 핵심만 추출
-- Agent 응답에 길이 제약 명시 ("200자 이내 보고", "변경 파일 목록만")
-- 테스트 로그 long output은 Agent가 흡수, 메인엔 "37 pass / 0 fail" 한 줄
-- PR 본문 작성도 Agent에 위임 (git log·diff 읽는 부담 분리)
+#### 7.2.1 모델 매핑 (메인 strategy)
+
+| 모델 | 비용 비율 | 적합 작업 |
+|---|---|---|
+| **Haiku** | 1x | 단순 fix(1~3줄), 문서 갱신, 위치 검색, 커밋 메시지, 메커니컬 rename |
+| **Sonnet** | ~3x | spec 본문 코딩, 코드 리뷰, 다중 파일 변경, 일반 디버깅, e2e 시나리오 작성 |
+| **Opus** | ~15x | 아키텍처 결정, 트레이드오프 분석, 복잡한 디버깅, 갈등하는 제약 다루기 |
+
+**전략**: 메인 = 가벼운 오케스트레이터(Haiku 유지), 코딩은 Sonnet 위임, Opus는 1회성 의사결정 시점에만.
+
+#### 7.2.2 격리 룰 (Round 1.5 검증 완료)
+
+**근거 데이터 (5회 연속 사고 0)**:
+
+| 라운드 | 토큰 소비 | 사고 | 적용 격리 룰 | 비고 |
+|---|---|---|---|---|
+| B-7 | ~128k | 1회 | 미적용 | Agent 충돌(+33k 손실) |
+| B-9 | ~60k | 0 | 적용 시작 | 격리 룰 초기 도입 |
+| B-10 | ~72k | 0 | 적용 | 격리 룰 |
+| range | ~67k | 0 | 적용 | 격리 룰 |
+| e2e cover | ~85k | 0 | 적용 | 격리 룰 |
+| B-8 | ~89k | 0 | 적용 | 격리 룰 |
+
+**격리 룰 구성**:
+1. **파일 영역 분리**: 같은 working tree에서 두 Agent 병렬 호출 시 다른 파일 영역으로 분리 (예: src+tests vs docs)
+2. **변경 직후 즉시 git add**: 수정 완료 후 바로 해당 영역을 staging area에 고정
+3. **"다른 영역 절대 건드리지 마" 프롬프트 명시**: Agent 시스템 메시지에 분리 경계 명시
+
+**효과**: worktree isolation 없이도 토큰 효율 + 변경 보호 양립.
+
+#### 7.2.3 메인 워크플로우 (사고 회피 패턴)
+
+- **Bash grep으로 위치만 추출** (`grep -rn "패턴" src/`) → Agent에 정확한 파일·라인 명시 위임. 메인이 대상 파일 통째로 Read 금지.
+- **Agent 응답 길이 제약 명시**: "200~300자 제약", "변경 파일·라인·테스트 결과만"
+- **사용자 paste > 메인 추측**: 라이브 환경 정보는 사용자 paste로만 수집 (메인이 fetch X). 단 fixture로 mock 가능하면 e2e 우선.
+- **분할 commit 메인이 처리**: Agent는 변경만, 메인이 `git status` 보고 영역별 분할 commit.
+
+#### 7.2.4 Round 2 진입 시 권장 구성
+
+| 트랙 | spec | Agent 역할 | 분리 전략 |
+|---|---|---|---|
+| **Track A** | 06 → 08 | Sonnet coder + Sonnet code-reviewer | 순차 진행 (한 세션에 묶음) |
+| **Track B** | 02 → 03 → 04 | Sonnet coder | 순차 진행 (parsers.js 충돌 회피) |
+| **병렬 옵션** | A ∥ B | worktree isolation 또는 격리 룰 적용 | 같은 working tree면 §7.2.2 격리 룰 필수 |
+
+**선택지**:
+- **(권장 Level 1) 순차**: Track A 완료 머지 → Track B 시작
+- **(권장 Level 2) 격리 룰로 병렬**: 파일 영역 분리(A=service-worker.js/popup.js, B=parsers.js/옵션페이지) + 변경 직후 즉시 git add
+- **(고급) worktree 진짜 병렬**: `isolation: "worktree"` flag로 두 Agent 동시 독립 worktree에서 작업
 
 ### 7.3 안티패턴 (피할 것)
 
@@ -412,6 +405,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 - ❌ Agent를 한 메시지에 1개씩 N번 호출 — 직렬화. 병렬은 단일 메시지 다중 호출 필수
 - ❌ Agent 보고서를 그대로 사용자에게 relay — 한 번 압축 (CLAUDE.md "끝 요약 1-2문장")
 - ❌ 자동화 hook으로 Agent 결과를 SessionStart에 주입 (전역 CLAUDE.md "additionalContext는 짧고 무시 가능한 것만")
+- ❌ 격리 룰 위반: 동일 파일(예: parsers.js) 다른 함수라도 동시 Agent 수정 — rebase/conflict 비용 > 순차 비용
 - ❌ worktree 안 쓰고 한 브랜치에서 Track A·B 섞기 — 충돌 = 메인 개입 = 토큰 폭증
 
 ### 7.4 검증 단계
@@ -431,11 +425,7 @@ Round 3 ┃ [Claude: 09 ∥ 10]    (동시 진행 가능)                      �
 
 ## 9. 변경 이력
 
-- **2026-04-30 B-8 해소**: E2E headless='new' 모드 service worker timeout fix. 옵션 B(about:blank navigate) + E(launch args) + A(timeout 상향) 조합으로 HEADLESS=1 12/12 pass 달성. 문서 갱신: NEXT-SESSION §1·§4·§9, task-b8-e2e-headless.md 상단에 ✅ 해소 마킹 및 적용 옵션 표기.
-- **2026-04-30 e2e 폴링 커버리지 보강 + 라이브 검증 최후 수단 규칙 신설**: fixture·scenario 다중 페이지/날짜 확장 진행 중. 문서 갱신: AUTHORING.md "라이브 회귀 발견 시 fixture" 섹션, NEXT-SESSION §1 직전 세션 추가, §5.7 라이브 검증 최후 수단 신규 섹션, §9 변경이력.
-- **2026-04-30 spec 05 폴링 범위 확장**: default `rangeDays` 30 → 1825(5년), `MAX_PAGES` 10 → 30. 사실상 "전체 미래 일정" 폴링 정책. 문서 갱신: spec 05 §6·§5·§14, NEXT-SESSION §1.
-- **2026-04-30 B-10 ✅ 해소**: spec 05 페이지네이션 누락 — `scdate`/`ecdate`/`pageIndex` 쿼리 지원으로 폴링 다중 페이지 순회. 문서 갱신 3건(NEXT-SESSION §1·§4·§9, spec 05 정책·알고리즘, runtime-env 한 줄).
-- **2026-04-30 D-05-2 ✅ 해소 + B-9 신규 해소**: spec 05 라이브 회귀 — list.do URL 쿼리스트링 `?menuNo=200046` 추가 필요. `fix/spec-05-list-url-menuno` 1 커밋 수정 + 회귀 테스트. §1 직전 세션·§4 B-1·B-9 항목 갱신.
+- **2026-04-30~05-02 Round 1.5 머지 완료**: B-7/B-9/B-10 라이브 회귀 4건 + e2e 커버리지 보강 + B-8 headless 모드 timeout 해소. 6개 작업(12 commits) 모두 main 진입. ea9133e..344bf2f 범위. 문서 갱신: NEXT-SESSION §1 Round 1.5 통합 헤더, §4 B-7/9/10 제거(해소 완료), §5.4 "선결조건 모두 해소" 표기, §5.6 타임라인 Round 1.5 추가, §6 Round 2 진입 명확화, §7.2 격리 룰 신설, §7.3 안티패턴 추가, §9 통합 문단.
 - 2026-04-28: 초기 인계 문서 작성. spec 01~10 draft 기준의 미결정 항목 모음.
 - 2026-04-28: spec 01 결정 반영 — 새 탭 전용 페이지 진입(U-01-1), 시간축 08:00~24:00(U-01-2), 데이터 소스 = spec 05 `lectureSnapshot`(D-3). 작업 순서 05 → 01로 변경. spec 01·05 본문 동기화, 의존 그래프(§5)·권장 시퀀스(§6) 갱신.
 - 2026-04-29: §2를 묶음 A~E 구조로 재편(차단성 🛑/⏸️/✅ 분류 추가), §5를 라운드 단위로 재배치(Round 0~3 + 의존성 그래프 + 타임라인 + 병렬 효율 룰 + 함정 포인트), §6 권장 시퀀스를 Round 0 진입 형태로 갱신, **§7 작업 모드 신설**(code-delegate + worktree 병렬, 토큰 절약 룰, 안티패턴), §8/§9 번호 시프트.
